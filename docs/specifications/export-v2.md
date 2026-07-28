@@ -1,7 +1,6 @@
 # NeuroQP project export v2
 
-Status: normative  
-Wire version: `v2`  
+Status: normative. Wire version: `v2`.
 Source of truth: the live NeuroQP exporter
 
 This document defines the archive produced by the NeuroQP exporter and accepted
@@ -359,7 +358,6 @@ that disables all safety checks.
   "linkedTrainingRunIdsByStaining": {}
 }
 ```
-
 The corresponding data image record is canonical only when it includes both:
 
 ```json
