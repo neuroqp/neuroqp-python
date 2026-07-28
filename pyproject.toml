@@ -30,8 +30,10 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/neuroqp/neuroqp-python"
+Documentation = "https://github.com/neuroqp/neuroqp-python#documentation"
 Repository = "https://github.com/neuroqp/neuroqp-python"
 Issues = "https://github.com/neuroqp/neuroqp-python/issues"
+Changelog = "https://github.com/neuroqp/neuroqp-python/blob/main/CHANGELOG.md"
 
 [project.scripts]
 neuroqp = "neuroqp.cli:main"
@@ -60,9 +62,15 @@ packages = ["src/neuroqp"]
 include = [
   "/src",
   "/tests",
-  "/docs/specifications",
+  "/docs",
+  "/scripts",
+  "/CHANGELOG.md",
+  "/CODE_OF_CONDUCT.md",
+  "/CONTRIBUTING.md",
   "/LICENSE",
+  "/SECURITY.md",
   "/README.md",
+  "/mkdocs.yml",
   "/pyproject.toml",
   "/tox.ini",
 ]

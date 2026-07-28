@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      minor: ${{ steps.version.outputs.minor }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - run: uv sync --locked --group dev --group docs
+      - name: Verify stable version and tag
+        id: version
+        run: |
+          python - <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          tag = os.environ["GITHUB_REF_NAME"]
+          if ".dev" in version or tag != f"v{version}":
+              raise SystemExit(f"release refused: tag {tag!r}, version {version!r}")
+          major, minor, _ = version.split(".")
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
+              output.write(f"version={version}\nminor={major}.{minor}\n")
+          PY
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy
+      - run: uv run pytest
+      - run: uv run python scripts/build_example_export.py --check
+      - run: uv run mkdocs build --strict
+      - run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/*
+          if-no-files-found: error
+
+  attest:
+    name: Attest distributions
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: dist/*
+
+  publish:
+    name: Publish to PyPI
+    needs:
+      - build
+      - attest
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/neuroqp/${{ needs.build.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: Create GitHub release
+    needs:
+      - build
+      - attest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
+      - name: Create release and support label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MINOR: ${{ needs.build.outputs.minor }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --repo "$GITHUB_REPOSITORY"
+          gh label create "support:$MINOR" --color 0E8A7A --force --repo "$GITHUB_REPOSITORY"
+
+  documentation:
+    name: Deploy versioned documentation
+    needs:
+      - build
+      - publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - run: uv sync --locked --group docs
+      - name: Deploy immutable minor documentation
+        env:
+          MINOR: ${{ needs.build.outputs.minor }}
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          uv run mike deploy --branch docs-site --push --update-aliases "$MINOR" latest

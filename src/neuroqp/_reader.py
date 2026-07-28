@@ -397,7 +397,21 @@ def validate_export(
     *,
     limits: ExportLimits | None = None,
 ) -> ValidationReport:
-    """Validate a local v2 ZIP or extracted directory."""
+    """Validate a local v2 ZIP archive or extracted directory.
+
+    Parameters
+    ----------
+    source
+        Path to a NeuroQP export ZIP archive or extracted directory.
+    limits
+        Optional resource limits for archive and metadata reads. Mandatory path
+        and pickle protections remain enabled.
+
+    Returns
+    -------
+    ValidationReport
+        An aggregate report. A valid export has no issues.
+    """
 
     export, report = _load(source, limits or ExportLimits())
     if export is not None:
@@ -410,7 +424,33 @@ def open_export(
     *,
     limits: ExportLimits | None = None,
 ) -> ProjectExport:
-    """Open and validate a local v2 ZIP or extracted directory."""
+    """Open and validate a local v2 ZIP archive or extracted directory.
+
+    Parameters
+    ----------
+    source
+        Path to a NeuroQP export ZIP archive or extracted directory.
+    limits
+        Optional resource limits for archive and metadata reads. Mandatory path
+        and pickle protections remain enabled.
+
+    Returns
+    -------
+    ProjectExport
+        The open, validated project export.
+
+    Raises
+    ------
+    InvalidExportError
+        If the export fails validation.
+    UnsupportedVersionError
+        If the export format version is unsupported.
+
+    Notes
+    -----
+    Use the returned object as a context manager so its storage is closed
+    promptly.
+    """
 
     export, report = _load(source, limits or ExportLimits())
     if export is not None:

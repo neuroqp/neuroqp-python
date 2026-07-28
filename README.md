@@ -44,13 +44,26 @@ ZIP archives and extracted export directories are both supported.
 
 ## Project links
 
-- [Documentation: export v2 specification](docs/specifications/export-v2.md)
+- [Documentation](docs/index.md)
+- [Export v2 specification](docs/specifications/export-v2.md)
 - [Versions](https://github.com/neuroqp/neuroqp-python/tags)
 - [Releases](https://github.com/neuroqp/neuroqp-python/releases)
+- [Changelog](CHANGELOG.md)
 - [Issue tracker](https://github.com/neuroqp/neuroqp-python/issues)
 - [Source code](https://github.com/neuroqp/neuroqp-python)
 
-Versioned user and API documentation links will be added when the documentation site is published.
+The public versioned documentation URL will be added after the first release deployment.
+
+## Documentation
+
+Build and serve the complete documentation locally:
+
+```bash
+uv sync --group docs
+uv run mkdocs serve
+```
+
+Open <http://127.0.0.1:8000>. The server rebuilds when documentation or docstrings change. Use `uv run mkdocs build --strict` for the same strict build used in CI.
 
 ## Supported versions
 
