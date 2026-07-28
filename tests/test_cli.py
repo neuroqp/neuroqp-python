@@ -36,22 +36,32 @@ def test_validate_invalid_text(capsys: pytest.CaptureFixture[str]) -> None:
 def test_inspect_text(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["inspect", str(VALID)]) == 0
     output = capsys.readouterr().out
-    assert "Minimal project (project-1)" in output
-    assert "Animals: 1" in output
+    assert "Validation\n  Status: valid" in output
+    assert "Project\n  Name: Minimal project\n  ID: project-1" in output
+    assert "Modules\n  data: included\n  registration: not included" in output
+    assert "Animals: 1\n    - Mouse 1 (animal-1)" in output
+    assert "Stainings: 1\n    - DAPI (staining-1)" in output
+    assert "Classifier selections\n  None" in output
 
 
 def test_inspect_json(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["inspect", str(VALID), "--json"]) == 0
     output = capsys.readouterr().out
     payload = json.loads(output)
+    assert payload["valid"] is True
     assert payload["project"]["name"] == "Minimal project"
+    assert payload["project"]["wholeSlice"]["micronsPerPixel"] == 4.2975
     assert payload["counts"]["slices"] == 1
+    assert payload["animals"] == [{"id": "animal-1", "name": "Mouse 1"}]
+    assert payload["stainings"] == [{"id": "staining-1", "name": "DAPI"}]
+    assert payload["expiresAt"] == "2026-08-04T12:00:00+00:00"
 
 
 def test_inspect_invalid(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["inspect", str(INVALID)]) == 1
     output = capsys.readouterr().out
     assert output.startswith("Cannot inspect invalid export:")
+    assert "(missing_member)" in output
 
 
 def test_inspect_invalid_json(capsys: pytest.CaptureFixture[str]) -> None:

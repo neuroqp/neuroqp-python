@@ -70,6 +70,8 @@ include = [
 [tool.ruff]
 target-version = "py310"
 line-length = 88
+extend-exclude = ["*.md"]
+force-exclude = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

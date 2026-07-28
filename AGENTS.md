@@ -1,13 +1,18 @@
 # AGENTS.md
 
-- Read `docs/specifications/export-v2.md` before changing export parsing,
-  validation, models, or fixtures. The live NeuroQP exporter remains the
-  ultimate source of truth if code and documentation disagree.
-- Use `uv sync --all-groups` to install. Run Ruff, strict mypy, and pytest
-  before pushing; use `uv run tox` for the supported Python matrix.
-- Preserve backward compatibility for the public API and every published export
-  format. Wire-format adapters stay private.
-- Treat exports as untrusted input: never enable pickle loading, weaken archive
-  path checks, or commit private real exports.
-- Normal changes do not alter the package version or publish artifacts. Only a
-  dedicated release PR may authorize publication.
+NeuroQP Python is the Python SDK and CLI for reading and validating NeuroQP project exports. This repository contains the public package, export models, validation, and tests.
+
+## Development
+
+- Sync: `uv sync`
+- Test: `uv run pytest`
+- Test all Python versions: `uv run tox`
+- Lint: `uv run ruff check .`
+- Type-check: `uv run mypy`
+
+## Rules
+
+- Read `docs/specifications/export-v2.md` before changing export parsing, models, or fixtures.
+- Treat exports as untrusted input; never enable pickle loading or weaken archive path checks.
+- Preserve backward compatibility for the public API and published export formats.
+- Change versions and publish artifacts only in dedicated release work.
