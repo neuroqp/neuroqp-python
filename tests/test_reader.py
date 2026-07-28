@@ -182,7 +182,9 @@ def test_bad_zip_is_structured(tmp_path: Path) -> None:
 def test_zip_rejects_unsafe_paths(tmp_path: Path, member: str, code: str) -> None:
     path = tmp_path / "unsafe.zip"
     with zipfile.ZipFile(path, "w") as archive:
-        archive.writestr(member, "{}")
+        info = zipfile.ZipInfo(member)
+        info.filename = member
+        archive.writestr(info, "{}")
     assert validate_export(path).issues[0].code == code
 
 

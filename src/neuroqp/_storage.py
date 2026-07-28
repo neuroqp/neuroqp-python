@@ -113,10 +113,15 @@ class ZipStorage(Storage):
         for info in archive.infolist():
             if info.is_dir():
                 continue
+            raw_name = info.orig_filename
             name = info.filename
-            if not _safe_member(name):
+            if not _safe_member(raw_name):
                 issues.append(
-                    _issue(name, "unsafe_path", "ZIP member path is not root-relative")
+                    _issue(
+                        raw_name,
+                        "unsafe_path",
+                        "ZIP member path is not root-relative",
+                    )
                 )
                 continue
             if name in infos:
