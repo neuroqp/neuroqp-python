@@ -2,7 +2,7 @@
 
 NeuroQP Python is the Python SDK and command-line interface for reading, validating, and working with NeuroQP project exports.
 
-> **Status:** `0.1.0.dev0` is an early development version. It supports the structural metadata of canonical v2 exports; scientific result loading and the complete navigation API are not available yet.
+> **Status:** `0.1.0.dev0` is an unpublished development version. It supports canonical v2 export metadata, images and artifacts, atlas registration, classifier results, training samples, and cell matches.
 
 ## Installation
 
@@ -28,8 +28,16 @@ Open an export from Python:
 from neuroqp import open_export
 
 with open_export("neuroqp_export.zip") as export:
-    print(export.project.name)
-    print(export.animals)
+    print(export.name)
+
+    animal = export.animal_by_name("Mouse 1")
+    for slice_ in animal.slices:
+        print(slice_.name, slice_.slice_coordinate_mm)
+
+    if export.classification is not None:
+        staining = export.staining_by_name("NeuN")
+        results = export.classification.for_staining(staining).load_results()
+        print(results.positive_centroids)
 ```
 
 ZIP archives and extracted export directories are both supported.

@@ -1,27 +1,41 @@
-"""v2 reader and validator."""
+"""v2 reader and aggregate metadata validator."""
 
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, TypeVar
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
+from ._api import ProjectExport as ProjectExport
+from ._api import _ClassificationData, _MatchData
 from ._storage import Storage, StorageError, open_storage
-from .errors import ClosedExportError, InvalidExportError, UnsupportedVersionError
+from .errors import InvalidExportError, UnsupportedVersionError
 from .models import (
     Animal,
+    Atlas,
+    AtlasRegistration,
     BrainRegion,
+    ClassificationResultInfo,
+    ClassifierMetadata,
+    DetailTransform,
+    EntityReference,
     ExportLimits,
     ExportMetadata,
     Image,
     Manifest,
+    MatchResultInfo,
     Module,
+    Point,
     ProjectMetadata,
+    RegistrationLandmark,
     Slice,
+    SliceExclusion,
     Staining,
+    TrainingSample,
+    TrainingSummary,
     ValidationIssue,
     ValidationReport,
 )
@@ -71,18 +85,57 @@ def _read_json(
     return None
 
 
+def _read_jsonl(
+    model: type[ModelT],
+    storage: Storage,
+    path: str,
+    limits: ExportLimits,
+    issues: list[ValidationIssue],
+) -> tuple[ModelT, ...] | None:
+    try:
+        data = storage.read(path, limits.max_metadata_bytes)
+    except FileNotFoundError:
+        issues.append(_issue(path, "missing_member", "required member is missing"))
+        return None
+    except StorageError as error:
+        issues.extend(error.issues)
+        return None
+    records: list[ModelT] = []
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as error:
+        issues.append(_issue(path, "invalid_utf8", str(error)))
+        return None
+    for line_number, line in enumerate(text.splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError as error:
+            issues.append(
+                _issue(path, "invalid_json", error.msg, f"line {line_number}")
+            )
+            continue
+        record = _parse_model(model, value, path, issues, prefix=f"{line_number}.")
+        if record is not None:
+            records.append(record)
+    return tuple(records)
+
+
 def _parse_model(
     model: type[ModelT],
     value: Any | None,
     path: str,
     issues: list[ValidationIssue],
+    *,
+    prefix: str = "",
 ) -> ModelT | None:
     if value is None:
         return None
     try:
         return model.model_validate(value)
     except ValidationError as error:
-        _validation_issues(error, path, issues)
+        _validation_issues(error, path, issues, prefix)
         return None
 
 
@@ -105,20 +158,21 @@ def _validation_issues(
     error: ValidationError,
     path: str,
     issues: list[ValidationIssue],
+    prefix: str = "",
 ) -> None:
     for detail in error.errors(include_url=False):
-        field = ".".join(str(item) for item in detail["loc"]) or None
+        field = prefix + ".".join(str(item) for item in detail["loc"])
         code = (
             "unsupported_version"
             if field == "exportVersion" and detail["type"] == "literal_error"
             else "invalid_field"
         )
-        issues.append(_issue(path, code, detail["msg"], field))
+        issues.append(_issue(path, code, detail["msg"], field or None))
 
 
-def _duplicates(values: list[str]) -> set[str]:
-    seen: set[str] = set()
-    duplicates: set[str] = set()
+def _duplicates(values: Sequence[str | int]) -> set[str | int]:
+    seen: set[str | int] = set()
+    duplicates: set[str | int] = set()
     for value in values:
         if value in seen:
             duplicates.add(value)
@@ -126,12 +180,26 @@ def _duplicates(values: list[str]) -> set[str]:
     return duplicates
 
 
+def _check_duplicates(
+    path: str,
+    label: str,
+    values: Sequence[str | int],
+    issues: list[ValidationIssue],
+    *,
+    code: str = "duplicate_id",
+) -> None:
+    for duplicate in _duplicates(values):
+        issues.append(_issue(path, code, f"duplicate {label}: {duplicate}"))
+
+
 def _cross_validate(
     manifest: Manifest | None,
     metadata: ExportMetadata | None,
+    project: ProjectMetadata | None,
     stainings: tuple[Staining, ...] | None,
     animals: tuple[Animal, ...] | None,
     slices: tuple[Slice, ...] | None,
+    brain_regions: tuple[BrainRegion, ...] | None,
     issues: list[ValidationIssue],
 ) -> None:
     if manifest is not None and manifest.project_metadata_path != "project/export.json":
@@ -145,6 +213,8 @@ def _cross_validate(
         )
     if manifest is not None and metadata is not None:
         comparisons = (
+            ("exportVersion", manifest.export_version, metadata.export_version),
+            ("exportedAt", manifest.exported_at, metadata.exported_at),
             ("exportId", manifest.export_id, metadata.export_id),
             ("projectId", manifest.project.id, metadata.project_id),
             (
@@ -168,19 +238,44 @@ def _cross_validate(
                         field,
                     )
                 )
-    for path, name, values in (
+    collections = (
         (
             "project/stainings.json",
             "staining ID",
             [item.id for item in stainings or ()],
         ),
-        ("project/animals.json", "animal ID", [item.id for item in animals or ()]),
-        ("project/slices.json", "slice ID", [item.id for item in slices or ()]),
-    ):
-        for duplicate in _duplicates(values):
-            issues.append(
-                _issue(path, "duplicate_id", f"duplicate {name}: {duplicate}")
-            )
+        (
+            "project/animals.json",
+            "animal ID",
+            [item.id for item in animals or ()],
+        ),
+        (
+            "project/slices.json",
+            "slice ID",
+            [item.id for item in slices or ()],
+        ),
+        (
+            "project/brain-regions.json",
+            "structure ID",
+            [item.structure_id for item in brain_regions or ()],
+        ),
+    )
+    for path, label, values in collections:
+        _check_duplicates(path, label, values, issues)
+    _check_duplicates(
+        "project/stainings.json",
+        "staining name",
+        [item.name for item in stainings or ()],
+        issues,
+        code="duplicate_name",
+    )
+    _check_duplicates(
+        "project/animals.json",
+        "animal name",
+        [item.name for item in animals or ()],
+        issues,
+        code="duplicate_name",
+    )
     animal_ids = {animal.id for animal in animals or ()}
     for index, slice_ in enumerate(slices or ()):
         if slice_.animal_id not in animal_ids:
@@ -192,6 +287,33 @@ def _cross_validate(
                     f"{index}.animalId",
                 )
             )
+    staining_ids = {staining.id for staining in stainings or ()}
+    if manifest is not None:
+        for staining_id in (
+            manifest.selected_classifier_head_ids_by_staining
+            | manifest.linked_training_run_ids_by_staining
+        ):
+            if staining_id not in staining_ids:
+                issues.append(
+                    _issue(
+                        "manifest.json",
+                        "unknown_staining",
+                        f"selection references unknown staining {staining_id}",
+                    )
+                )
+        if (
+            project is not None
+            and project.atlas_id is not None
+            and (manifest.atlas is None or project.atlas_id != manifest.atlas.id)
+        ):
+            issues.append(
+                _issue(
+                    "project/project.json",
+                    "inconsistent_atlas",
+                    "atlasId does not agree with manifest.json",
+                    "atlasId",
+                )
+            )
 
 
 def _validate_data(
@@ -200,10 +322,12 @@ def _validate_data(
     stainings: tuple[Staining, ...],
     limits: ExportLimits,
     issues: list[ValidationIssue],
-) -> None:
+) -> tuple[tuple[Slice, ...], dict[str, tuple[Image, ...]]]:
     staining_ids = {staining.id for staining in stainings}
     image_ids: list[str] = []
     archive_paths: list[str] = []
+    detailed_slices: list[Slice] = []
+    images_by_slice: dict[str, tuple[Image, ...]] = {}
     for slice_ in slices:
         base = f"data/slices/{slice_.id}"
         slice_path = f"{base}/slice.json"
@@ -220,11 +344,13 @@ def _validate_data(
             images_path,
             issues,
         )
+        detailed_slices.append(slice_record or slice_)
+        images_by_slice[slice_.id] = images or ()
         if slice_record is not None and (
             slice_record.id,
             slice_record.animal_id,
-            slice_record.ap_mm,
-        ) != (slice_.id, slice_.animal_id, slice_.ap_mm):
+            slice_record.slice_coordinate_mm,
+        ) != (slice_.id, slice_.animal_id, slice_.slice_coordinate_mm):
             issues.append(
                 _issue(
                     slice_path,
@@ -233,10 +359,10 @@ def _validate_data(
                 )
             )
         for index, image in enumerate(images or ()):
-            image_ids.append(image.image_id)
+            image_ids.append(image.id)
             archive_paths.append(image.archive_path)
             sanitized = image.original_filename.replace("/", "_").replace("\\", "_")
-            expected = f"{base}/images/{image.image_id}__{sanitized}"
+            expected = f"{base}/images/{image.id}__{sanitized}"
             if image.slice_id != slice_.id:
                 issues.append(
                     _issue(
@@ -273,219 +399,506 @@ def _validate_data(
                     )
                 )
     for label, values in (("imageId", image_ids), ("archivePath", archive_paths)):
-        for duplicate in _duplicates(values):
-            issues.append(
-                _issue(
-                    "data",
-                    "duplicate_image",
-                    f"duplicate {label}: {duplicate}",
-                    label,
-                )
-            )
+        _check_duplicates("data", label, values, issues, code="duplicate_image")
+    return tuple(detailed_slices), images_by_slice
 
 
 def _validate_registration(
     storage: Storage,
     manifest: Manifest,
+    slices: tuple[Slice, ...],
     limits: ExportLimits,
     issues: list[ValidationIssue],
-) -> None:
+) -> tuple[Atlas | None, dict[str, AtlasRegistration], dict[str, DetailTransform]]:
     path = "registration/atlas/atlas-manifest.json"
-    if manifest.atlas is None:
-        return
     value = _read_json(storage, path, limits, issues)
-    if not isinstance(value, dict):
-        return
-    for field in ("id", "key", "version", "name", "species", "plane", "spec"):
-        if field not in value:
-            issues.append(_issue(path, "invalid_field", "field is required", field))
-    for field in ("id", "key", "version", "name"):
-        if value.get(field) != getattr(manifest.atlas, field):
+    atlas: Atlas | None = None
+    if isinstance(value, dict):
+        if manifest.atlas is not None:
+            for field in ("id", "key", "version", "name"):
+                if value.get(field) != getattr(manifest.atlas, field):
+                    issues.append(
+                        _issue(
+                            path,
+                            "inconsistent_atlas",
+                            f"{field} does not agree with manifest.json",
+                            field,
+                        )
+                    )
+        normalized = dict(value)
+        normalized["specification"] = normalized.pop("spec", None)
+        atlas = _parse_model(Atlas, normalized, path, issues)
+        if atlas is not None and manifest.atlas is None:
             issues.append(
                 _issue(
                     path,
                     "inconsistent_atlas",
-                    f"{field} does not agree with manifest.json",
-                    field,
+                    "registration atlas is absent from manifest.json",
                 )
             )
+    atlas_registrations: dict[str, AtlasRegistration] = {}
+    detail_transforms: dict[str, DetailTransform] = {}
+    for slice_ in slices:
+        base = f"registration/slices/{slice_.id}"
+        registration_path = f"{base}/atlas-registration.json"
+        if registration_path in storage.members:
+            raw = _read_json(storage, registration_path, limits, issues)
+            if isinstance(raw, dict):
+                landmarks: list[RegistrationLandmark] = []
+                points = raw.get("pointsV2")
+                if isinstance(points, list):
+                    try:
+                        landmarks = [
+                            RegistrationLandmark(
+                                image=Point(x=point["imageXPx"], y=point["imageYPx"]),
+                                atlas_plane_mm=Point(
+                                    x=point["atlasPlaneXMm"],
+                                    y=point["atlasPlaneYMm"],
+                                ),
+                            )
+                            for point in points
+                        ]
+                    except (KeyError, TypeError, ValidationError) as error:
+                        issues.append(
+                            _issue(
+                                registration_path,
+                                "invalid_field",
+                                str(error),
+                                "pointsV2",
+                            )
+                        )
+                else:
+                    issues.append(
+                        _issue(
+                            registration_path,
+                            "invalid_field",
+                            "pointsV2 must be an array",
+                            "pointsV2",
+                        )
+                    )
+                if raw.get("slideId") != slice_.id:
+                    issues.append(
+                        _issue(
+                            registration_path,
+                            "inconsistent_slice",
+                            "slideId does not match its directory",
+                            "slideId",
+                        )
+                    )
+                try:
+                    atlas_registrations[slice_.id] = AtlasRegistration(
+                        slice_id=raw["slideId"],
+                        slice_coordinate_mm=raw["apMm"],
+                        landmarks=tuple(landmarks),
+                    )
+                except (KeyError, ValidationError) as error:
+                    issues.append(
+                        _issue(
+                            registration_path,
+                            "invalid_field",
+                            str(error),
+                        )
+                    )
+        transform_path = f"{base}/detail-to-whole-slice.json"
+        if transform_path in storage.members:
+            raw = _read_json(storage, transform_path, limits, issues)
+            if isinstance(raw, dict):
+                if raw.get("slideId") != slice_.id:
+                    issues.append(
+                        _issue(
+                            transform_path,
+                            "inconsistent_slice",
+                            "slideId does not match its directory",
+                            "slideId",
+                        )
+                    )
+                try:
+                    detail_transforms[slice_.id] = DetailTransform(
+                        slice_id=raw["slideId"],
+                        corners=tuple(
+                            Point.model_validate(point) for point in raw["corners"]
+                        ),
+                    )
+                except (KeyError, TypeError, ValidationError) as error:
+                    issues.append(
+                        _issue(transform_path, "invalid_field", str(error), "corners")
+                    )
+    return atlas, atlas_registrations, detail_transforms
+
+
+def _exclusions(
+    value: Any,
+    path: str,
+    field: str,
+    issues: list[ValidationIssue],
+) -> tuple[SliceExclusion, ...]:
+    result = _parse_list(SliceExclusion, value, path, issues)
+    if result is None:
+        issues.append(_issue(path, "invalid_field", f"{field} must be an array", field))
+        return ()
+    return result
+
+
+def _reference_id(
+    value: Any,
+    path: str,
+    field: str,
+    issues: list[ValidationIssue],
+) -> str | None:
+    reference = _parse_model(EntityReference, value, path, issues, prefix=f"{field}.")
+    return reference.id if reference is not None else None
 
 
 def _validate_classification(
     storage: Storage,
+    manifest: Manifest,
+    slices: tuple[Slice, ...],
+    stainings: tuple[Staining, ...],
     limits: ExportLimits,
     issues: list[ValidationIssue],
-) -> None:
+) -> tuple[tuple[_ClassificationData, ...], tuple[_MatchData, ...]]:
     path = "classification/manifest.json"
     value = _read_json(storage, path, limits, issues)
     if not isinstance(value, dict):
-        return
+        return (), ()
     if value.get("exportVersion") != "v2":
         issues.append(_issue(path, "unsupported_version", "exportVersion must be v2"))
-    for collection, path_fields in (
-        (
-            "stainings",
-            (
-                "classifierPath",
-                "trainingSummaryPath",
-                "trainingSamplesPath",
-                "resultIndexPath",
-            ),
-        ),
-        ("matches", ("matchPath",)),
-    ):
-        entries = value.get(collection)
-        if not isinstance(entries, list):
+    staining_entries = value.get("stainings")
+    match_entries = value.get("matches")
+    if not isinstance(staining_entries, list):
+        issues.append(
+            _issue(path, "invalid_field", "stainings must be an array", "stainings")
+        )
+        staining_entries = []
+    if not isinstance(match_entries, list):
+        issues.append(
+            _issue(path, "invalid_field", "matches must be an array", "matches")
+        )
+        match_entries = []
+    staining_ids = {item.id for item in stainings}
+    slice_ids = {item.id for item in slices}
+    classifications: list[_ClassificationData] = []
+    for index, entry in enumerate(staining_entries):
+        prefix = f"stainings.{index}"
+        if not isinstance(entry, dict):
             issues.append(
-                _issue(
-                    path, "invalid_field", f"{collection} must be an array", collection
-                )
+                _issue(path, "invalid_field", "entry must be an object", prefix)
             )
             continue
-        for index, entry in enumerate(entries):
-            if not isinstance(entry, dict):
+        staining_id = _reference_id(
+            entry.get("staining"), path, f"{prefix}.staining", issues
+        )
+        manifest_classifier_id = _reference_id(
+            entry.get("classifier"), path, f"{prefix}.classifier", issues
+        )
+        paths: dict[str, str] = {}
+        for field in (
+            "classifierPath",
+            "trainingSummaryPath",
+            "trainingSamplesPath",
+            "resultIndexPath",
+        ):
+            member = entry.get(field)
+            if not isinstance(member, str) or member not in storage.members:
                 issues.append(
                     _issue(
                         path,
-                        "invalid_field",
-                        "entry must be an object",
-                        f"{collection}.{index}",
+                        "invalid_reference",
+                        f"{field} must name an existing member",
+                        f"{prefix}.{field}",
                     )
                 )
-                continue
-            for path_field in path_fields:
-                member = entry.get(path_field)
-                if not isinstance(member, str) or member not in storage.members:
-                    issues.append(
-                        _issue(
-                            path,
-                            "invalid_reference",
-                            f"{path_field} must name an existing member",
-                            f"{collection}.{index}.{path_field}",
-                        )
+            else:
+                paths[field] = member
+        omitted = _exclusions(
+            entry.get("exclusions"), path, f"{prefix}.exclusions", issues
+        )
+        if staining_id is None or manifest_classifier_id is None or len(paths) != 4:
+            continue
+        if staining_id not in staining_ids:
+            issues.append(
+                _issue(path, "unknown_staining", f"unknown staining {staining_id}")
+            )
+        classifier = _parse_model(
+            ClassifierMetadata,
+            _read_json(storage, paths["classifierPath"], limits, issues),
+            paths["classifierPath"],
+            issues,
+        )
+        training = _parse_model(
+            TrainingSummary,
+            _read_json(storage, paths["trainingSummaryPath"], limits, issues),
+            paths["trainingSummaryPath"],
+            issues,
+        )
+        samples = _read_jsonl(
+            TrainingSample,
+            storage,
+            paths["trainingSamplesPath"],
+            limits,
+            issues,
+        )
+        index_value = _read_json(storage, paths["resultIndexPath"], limits, issues)
+        result_index: tuple[ClassificationResultInfo, ...] | None = None
+        index_staining_id: str | None = None
+        index_classifier_id: str | None = None
+        if isinstance(index_value, dict):
+            index_staining_id = _reference_id(
+                index_value.get("staining"),
+                paths["resultIndexPath"],
+                "staining",
+                issues,
+            )
+            index_classifier_id = _reference_id(
+                index_value.get("classifier"),
+                paths["resultIndexPath"],
+                "classifier",
+                issues,
+            )
+            result_index = _parse_list(
+                ClassificationResultInfo,
+                index_value.get("slices"),
+                paths["resultIndexPath"],
+                issues,
+            )
+        if classifier is not None:
+            selected = manifest.selected_classifier_head_ids_by_staining.get(
+                staining_id
+            )
+            if (
+                classifier.staining.id != staining_id
+                or index_staining_id != staining_id
+                or index_classifier_id != classifier.id
+                or manifest_classifier_id != classifier.id
+                or (selected is not None and selected != classifier.id)
+            ):
+                issues.append(
+                    _issue(
+                        paths["classifierPath"],
+                        "inconsistent_reference",
+                        "staining or classifier identity is inconsistent",
                     )
-
-
-class ProjectExport:
-    """An open, validated NeuroQP project export."""
-
-    def __init__(
-        self,
-        storage: Storage,
-        manifest: Manifest,
-        metadata: ExportMetadata,
-        project: ProjectMetadata,
-        stainings: tuple[Staining, ...],
-        animals: tuple[Animal, ...],
-        slices: tuple[Slice, ...],
-        brain_regions: tuple[BrainRegion, ...],
-    ) -> None:
-        self._storage = storage
-        self._manifest = manifest
-        self._metadata = metadata
-        self._project = project
-        self._stainings = stainings
-        self._animals = animals
-        self._slices = slices
-        self._brain_regions = brain_regions
-        self._closed = False
-
-    def _ensure_open(self) -> None:
-        if self._closed:
-            raise ClosedExportError("export is closed")
-
-    @property
-    def closed(self) -> bool:
-        """Whether this export has been closed."""
-
-        return self._closed
-
-    @property
-    def manifest(self) -> Manifest:
-        """Root manifest."""
-
-        self._ensure_open()
-        return self._manifest
-
-    @property
-    def metadata(self) -> ExportMetadata:
-        """Export metadata."""
-
-        self._ensure_open()
-        return self._metadata
-
-    @property
-    def project(self) -> ProjectMetadata:
-        """Project metadata."""
-
-        self._ensure_open()
-        return self._project
-
-    @property
-    def stainings(self) -> tuple[Staining, ...]:
-        """Project stainings."""
-
-        self._ensure_open()
-        return self._stainings
-
-    @property
-    def animals(self) -> tuple[Animal, ...]:
-        """Project animals."""
-
-        self._ensure_open()
-        return self._animals
-
-    @property
-    def slices(self) -> tuple[Slice, ...]:
-        """Project slices."""
-
-        self._ensure_open()
-        return self._slices
-
-    @property
-    def brain_regions(self) -> tuple[BrainRegion, ...]:
-        """Selected project brain regions."""
-
-        self._ensure_open()
-        return self._brain_regions
-
-    @property
-    def id(self) -> str:
-        """Project ID."""
-
-        return self.manifest.project.id
-
-    @property
-    def version(self) -> str:
-        """Wire export version."""
-
-        return self.manifest.export_version
-
-    @property
-    def exported_at(self) -> datetime:
-        """Export timestamp."""
-
-        return self.manifest.exported_at
-
-    @property
-    def name(self) -> str:
-        """Project name."""
-
-        return self.project.name
-
-    def close(self) -> None:
-        """Close the export. Repeated calls are safe."""
-
-        if not self._closed:
-            self._storage.close()
-            self._closed = True
-
-    def __enter__(self) -> ProjectExport:
-        self._ensure_open()
-        return self
-
-    def __exit__(self, *_: object) -> None:
-        self.close()
+                )
+            linked_run = manifest.linked_training_run_ids_by_staining.get(staining_id)
+            if linked_run != classifier.training_run_id:
+                issues.append(
+                    _issue(
+                        paths["classifierPath"],
+                        "inconsistent_reference",
+                        "trainingRunId does not agree with manifest.json",
+                        "trainingRunId",
+                    )
+                )
+        if training is not None and training.staining.id != staining_id:
+            issues.append(
+                _issue(
+                    paths["trainingSummaryPath"],
+                    "inconsistent_reference",
+                    "staining identity does not agree with classification manifest",
+                )
+            )
+        for sample in samples or ():
+            if sample.staining_id != staining_id or sample.slice_id not in slice_ids:
+                issues.append(
+                    _issue(
+                        paths["trainingSamplesPath"],
+                        "invalid_reference",
+                        "training sample references an unknown slice or staining",
+                    )
+                )
+        for exclusion in omitted:
+            if exclusion.slice_id not in slice_ids:
+                issues.append(
+                    _issue(
+                        path,
+                        "invalid_reference",
+                        "exclusion references an unknown slice",
+                        f"{prefix}.exclusions",
+                    )
+                )
+        result_slice_ids: list[str] = []
+        for result in result_index or ():
+            result_slice_ids.append(result.slice_id)
+            if (
+                result.slice_id not in slice_ids
+                or result.staining_id != staining_id
+                or classifier is None
+                or result.classifier_id != classifier.id
+            ):
+                issues.append(
+                    _issue(
+                        paths["resultIndexPath"],
+                        "invalid_reference",
+                        "result references an unknown or inconsistent object",
+                    )
+                )
+            if result.npz_path not in storage.members:
+                issues.append(
+                    _issue(
+                        paths["resultIndexPath"],
+                        "invalid_reference",
+                        "npzPath must name an existing member",
+                        "npzPath",
+                    )
+                )
+        _check_duplicates(
+            paths["resultIndexPath"],
+            "slice result",
+            result_slice_ids,
+            issues,
+            code="duplicate_result",
+        )
+        if (
+            classifier is not None
+            and training is not None
+            and samples is not None
+            and result_index is not None
+        ):
+            classifications.append(
+                _ClassificationData(
+                    staining_id,
+                    classifier,
+                    training,
+                    samples,
+                    result_index,
+                    omitted,
+                )
+            )
+    matches: list[_MatchData] = []
+    for index, entry in enumerate(match_entries):
+        prefix = f"matches.{index}"
+        if not isinstance(entry, dict):
+            issues.append(
+                _issue(path, "invalid_field", "entry must be an object", prefix)
+            )
+            continue
+        match_path = entry.get("matchPath")
+        if not isinstance(match_path, str) or match_path not in storage.members:
+            issues.append(
+                _issue(
+                    path,
+                    "invalid_reference",
+                    "matchPath must name an existing member",
+                    f"{prefix}.matchPath",
+                )
+            )
+            continue
+        match_value = _read_json(storage, match_path, limits, issues)
+        if not isinstance(match_value, dict):
+            continue
+        pair_key = match_value.get("pairKey")
+        manifest_staining_a = _reference_id(
+            entry.get("stainingA"), path, f"{prefix}.stainingA", issues
+        )
+        manifest_staining_b = _reference_id(
+            entry.get("stainingB"), path, f"{prefix}.stainingB", issues
+        )
+        staining_a = _reference_id(
+            match_value.get("stainingA"), match_path, "stainingA", issues
+        )
+        staining_b = _reference_id(
+            match_value.get("stainingB"), match_path, "stainingB", issues
+        )
+        omitted = _exclusions(
+            match_value.get("exclusions"), match_path, "exclusions", issues
+        )
+        match_result_index = _parse_list(
+            MatchResultInfo, match_value.get("slices"), match_path, issues
+        )
+        if (
+            not isinstance(pair_key, str)
+            or staining_a is None
+            or staining_b is None
+            or match_result_index is None
+        ):
+            issues.append(
+                _issue(match_path, "invalid_field", "match identity is invalid")
+            )
+            continue
+        if entry.get("pairKey") != pair_key:
+            issues.append(
+                _issue(
+                    match_path,
+                    "inconsistent_reference",
+                    "pairKey does not agree with classification manifest",
+                )
+            )
+        if (manifest_staining_a, manifest_staining_b) != (staining_a, staining_b):
+            issues.append(
+                _issue(
+                    match_path,
+                    "inconsistent_reference",
+                    "staining identities do not agree with classification manifest",
+                )
+            )
+        if staining_a not in staining_ids or staining_b not in staining_ids:
+            issues.append(
+                _issue(
+                    match_path,
+                    "unknown_staining",
+                    "match references an unknown staining",
+                )
+            )
+        for exclusion in omitted:
+            if exclusion.slice_id not in slice_ids:
+                issues.append(
+                    _issue(
+                        match_path,
+                        "invalid_reference",
+                        "exclusion references an unknown slice",
+                        "exclusions",
+                    )
+                )
+        result_slice_ids = []
+        for match_result in match_result_index:
+            result_slice_ids.append(match_result.slice_id)
+            if (
+                match_result.slice_id not in slice_ids
+                or {
+                    match_result.side_a.staining.id,
+                    match_result.side_b.staining.id,
+                }
+                != {staining_a, staining_b}
+                or match_result.npz_path not in storage.members
+            ):
+                issues.append(
+                    _issue(
+                        match_path,
+                        "invalid_reference",
+                        "match result references an unknown or inconsistent object",
+                    )
+                )
+        _check_duplicates(
+            match_path,
+            "slice result",
+            result_slice_ids,
+            issues,
+            code="duplicate_result",
+        )
+        matches.append(
+            _MatchData(
+                pair_key,
+                staining_a,
+                staining_b,
+                match_result_index,
+                omitted,
+            )
+        )
+    _check_duplicates(
+        path,
+        "classification staining",
+        [item.staining_id for item in classifications],
+        issues,
+        code="duplicate_result",
+    )
+    _check_duplicates(
+        path,
+        "pairKey",
+        [item.pair_key for item in matches],
+        issues,
+        code="duplicate_result",
+    )
+    return tuple(classifications), tuple(matches)
 
 
 def _load(
@@ -497,11 +910,9 @@ def _load(
         storage = open_storage(Path(source), limits)
     except StorageError as error:
         return None, ValidationReport(issues=tuple(error.issues))
-
     for path in _REQUIRED:
         if path not in storage.members:
             issues.append(_issue(path, "missing_member", "required member is missing"))
-
     values = {
         path: _read_json(storage, path, limits, issues)
         for path in _REQUIRED
@@ -546,20 +957,48 @@ def _load(
         "project/brain-regions.json",
         issues,
     )
-
-    _cross_validate(manifest, metadata, stainings, animals, slices, issues)
+    _cross_validate(
+        manifest,
+        metadata,
+        project,
+        stainings,
+        animals,
+        slices,
+        brain_regions,
+        issues,
+    )
+    images_by_slice: dict[str, tuple[Image, ...]] = {}
+    atlas: Atlas | None = None
+    atlas_registrations: dict[str, AtlasRegistration] = {}
+    detail_transforms: dict[str, DetailTransform] = {}
+    classifications: tuple[_ClassificationData, ...] = ()
+    matches: tuple[_MatchData, ...] = ()
     if (
         manifest is not None
         and Module.DATA in manifest.included_modules
         and slices is not None
         and stainings is not None
     ):
-        _validate_data(storage, slices, stainings, limits, issues)
-    if manifest is not None and Module.REGISTRATION in manifest.included_modules:
-        _validate_registration(storage, manifest, limits, issues)
-    if manifest is not None and Module.CLASSIFICATION in manifest.included_modules:
-        _validate_classification(storage, limits, issues)
-
+        slices, images_by_slice = _validate_data(
+            storage, slices, stainings, limits, issues
+        )
+    if (
+        manifest is not None
+        and Module.REGISTRATION in manifest.included_modules
+        and slices is not None
+    ):
+        atlas, atlas_registrations, detail_transforms = _validate_registration(
+            storage, manifest, slices, limits, issues
+        )
+    if (
+        manifest is not None
+        and Module.CLASSIFICATION in manifest.included_modules
+        and slices is not None
+        and stainings is not None
+    ):
+        classifications, matches = _validate_classification(
+            storage, manifest, slices, stainings, limits, issues
+        )
     report = ValidationReport(issues=tuple(issues))
     if not report.valid:
         storage.close()
@@ -581,6 +1020,14 @@ def _load(
             animals,
             slices,
             brain_regions,
+            images_by_slice,
+            atlas,
+            atlas_registrations,
+            detail_transforms,
+            classifications,
+            matches,
+            Module.REGISTRATION in manifest.included_modules,
+            Module.CLASSIFICATION in manifest.included_modules,
         ),
         report,
     )

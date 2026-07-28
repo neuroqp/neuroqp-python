@@ -24,5 +24,13 @@ class UnsupportedVersionError(InvalidExportError):
     """Raised when the export wire version is unsupported."""
 
 
+class ObjectNotFoundError(NeuroQPError, LookupError):
+    """Raised when a singular object lookup has no result."""
+
+
+class AmbiguousNameError(NeuroQPError, LookupError):
+    """Raised when a singular name lookup has several results."""
+
+
 class ClosedExportError(NeuroQPError):
     """Raised when a closed export is accessed."""
