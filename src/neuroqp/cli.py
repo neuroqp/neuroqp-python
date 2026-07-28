@@ -7,7 +7,8 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
-from ._reader import ProjectExport, open_export, validate_export
+from ._project import ProjectExport
+from ._reader import open_export, validate_export
 from .errors import InvalidExportError
 from .models import Module, ValidationReport
 
