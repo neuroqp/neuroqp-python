@@ -7,8 +7,8 @@ __pycache__/
 .ruff_cache/
 .tox/
 .venv/
+.package-venv/
 build/
 dist/
 htmlcov/
 plans/
-

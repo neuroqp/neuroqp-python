@@ -1,0 +1,19 @@
+{
+  "exportVersion": "v2",
+  "exportId": "export-1",
+  "exportedAt": "2026-07-28T12:00:00Z",
+  "project": {
+    "id": "project-1",
+    "slug": "minimal",
+    "name": "Minimal project"
+  },
+  "projectMetadataPath": "project/export.json",
+  "includedModules": [
+    "data"
+  ],
+  "atlas": null,
+  "selectedClassifierHeadIdsByStaining": {},
+  "linkedTrainingRunIdsByStaining": {},
+  "futureField": "preserved"
+}
+

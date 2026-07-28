@@ -1,0 +1,12 @@
+{
+  "exportVersion": "v2",
+  "exportedAt": "2026-07-28T12:00:00Z",
+  "exportId": "export-1",
+  "projectId": "project-1",
+  "expiresAt": 1785844800000,
+  "requestedModules": [
+    "data"
+  ],
+  "selectedClassifierHeadIdsByStaining": {}
+}
+
