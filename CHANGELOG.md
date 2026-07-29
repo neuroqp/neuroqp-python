@@ -2,6 +2,8 @@
 
 All notable changes to NeuroQP Python are recorded here.
 
+## 0.1.1 — Unreleased
+
 ## 0.1.0 — 2026-07-29
 
 - Add safe reading and aggregate validation for NeuroQP v2 ZIP archives and extracted directories.
