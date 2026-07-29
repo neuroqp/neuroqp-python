@@ -16,4 +16,5 @@ NeuroQP Python is the Python SDK and CLI for reading and validating NeuroQP proj
 - Treat exports as untrusted input; never enable pickle loading or weaken archive path checks.
 - Preserve backward compatibility for the public API and published export formats.
 - Keep Python files at or below 500 lines.
-- Change versions and publish artifacts only in dedicated release work.
+- Read `RELEASING.md` before dedicated release work; normal changes never alter
+  versions or publish artifacts.
