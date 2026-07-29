@@ -13,6 +13,9 @@ from neuroqp import ClosedExportError, ExportLimits, open_export
 FIXTURES = Path(__file__).parent / "fixtures"
 VALID = FIXTURES / "minimal-v2"
 IMAGE_MEMBER = "data/slices/slice-1/images/image-1__minimal.tif"
+DOWNLOADABLE_EXAMPLE = (
+    Path(__file__).parents[1] / "docs/assets/downloads/neuroqp-example-v2.zip"
+)
 
 
 def _tiff_export(tmp_path: Path) -> tuple[Path, np.ndarray]:
@@ -29,6 +32,18 @@ def _zip_export(source: Path, target: Path) -> Path:
             if path.is_file():
                 archive.write(path, path.relative_to(source).as_posix())
     return target
+
+
+def test_downloadable_example_contains_decodable_tiff() -> None:
+    with open_export(DOWNLOADABLE_EXAMPLE) as export:
+        image = export.slices[0].images[0]
+        with image.open() as stream:
+            pixels = imread(stream)
+
+        assert pixels.shape == (image.metadata.height, image.metadata.width)
+        np.testing.assert_array_equal(
+            pixels, np.arange(4, dtype=np.uint16).reshape(2, 2)
+        )
 
 
 def test_large_directory_artifact_is_streamed(
