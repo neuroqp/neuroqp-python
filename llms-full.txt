@@ -1,0 +1,2628 @@
+# NeuroQP Python
+
+> Python SDK and CLI for NeuroQP project exports
+
+Use these pages to write Python analyses for NeuroQP project exports.
+Start with the quickstart, then use the guides, API reference, and export
+specification as needed. The complete documentation is available in
+[llms-full.txt](llms-full.txt).
+
+
+# Overview
+
+# Build your own NeuroQP analyses in Python.
+
+Open a NeuroQP project export, navigate animals, slices, stainings, and atlas registrations, then work directly with classification and cell-match results as NumPy arrays.
+
+[Quickstart](https://python.neuroqp.com/0.1/getting-started/quickstart/index.md) [Browse the API](https://python.neuroqp.com/0.1/reference/functions/index.md)
+
+```
+from neuroqp import open_export
+
+with open_export("neuroqp_export.zip") as export:
+    print(export)
+    print(export.animals[0].slices)
+```
+
+NeuroQP Python connects your NeuroQP project to your own scientific analysis. It keeps animals, slices, stainings, images, atlas registrations, classifications, and matched cells linked, so you can focus on quantifying, comparing, and visualizing results with the Python tools you already use.
+
+## Start with real data
+
+Install the package and open a ZIP archive or extracted directory.
+
+[Installation →](https://python.neuroqp.com/0.1/getting-started/installation/index.md)
+
+## Understand the objects
+
+Move from a project to animals, slices, images, and optional results.
+
+[Object model →](https://python.neuroqp.com/0.1/concepts/object-model/index.md)
+
+## Analyze your results
+
+Load classification and cell-match results for your own analysis.
+
+[Classification guide →](https://python.neuroqp.com/0.1/guides/classification/index.md)
+# Getting started
+
+# Installation
+
+NeuroQP Python requires Python 3.12 through 3.14. Install it in a dedicated environment for each analysis project so its packages do not conflict with other work.
+
+## Install NeuroQP Python
+
+Choose the environment tool you already use. pip is available with Python; uv additionally records the analysis dependencies and their resolved versions.
+
+Create and activate a virtual environment, then install NeuroQP Python.
+
+**macOS and Linux**
+
+```
+python3.14 -m venv .venv
+source .venv/bin/activate
+python -m pip install neuroqp
+```
+
+**Windows PowerShell**
+
+```
+py -3.14 -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install neuroqp
+```
+
+Run the activation command again whenever you return to the analysis in a new terminal. If you already have an active environment, only run `python -m pip install neuroqp`.
+
+Confirm the installation:
+
+```
+python -c "import neuroqp; print(neuroqp.__version__)"
+neuroqp --help
+```
+
+Initialize the analysis directory with Python 3.14 and add NeuroQP Python. uv creates and maintains the project’s `.venv` and `uv.lock`.
+
+```
+uv init --python 3.14
+uv add neuroqp
+```
+
+Run commands in that environment without activating it:
+
+```
+uv run python -c "import neuroqp; print(neuroqp.__version__)"
+uv run neuroqp --help
+```
+
+## Use Jupyter
+
+Install JupyterLab in the same environment if you want to run the example notebooks or build your analysis interactively.
+
+```
+python -m pip install jupyterlab
+jupyter lab
+```
+
+```
+uv add jupyterlab
+uv run jupyter lab
+```
+
+Open the downloaded notebook from JupyterLab. Its first code cell downloads the small synthetic example export if the file is not already in the notebook directory.
+
+## Update NeuroQP Python
+
+```
+python -m pip install --upgrade neuroqp
+```
+
+```
+uv lock --upgrade-package neuroqp
+uv sync
+```
+
+TIFF reading, LZW decompression, disk-backed arrays, and region selection are installed with NeuroQP Python. You do not need to install a separate TIFF plugin.
+
+# Using NeuroQP with AI coding agents
+
+NeuroQP provides an optional agent skill for writing Python analyses of project exports. The skill gives an AI coding agent concise instructions for navigating exports, interpreting scientific results, processing images, and finding exact API documentation when needed.
+
+Install the skill from the same Python environment as NeuroQP so its guidance matches the package version used by your analysis. Skill installation never updates the Python package, and the skill never updates itself automatically.
+
+## Install the NeuroQP skill for Codex
+
+From the root of your analysis project, run:
+
+```
+neuroqp skill install --agent codex
+```
+
+This installs the skill in `.agents/skills/neuroqp-python` for Codex to discover in the current project. To make the skill available to Codex across all your projects instead, use:
+
+```
+neuroqp skill install --agent codex --scope user
+```
+
+When a compatible skill update is available, Codex can mention it when the skill loads. Apply the update explicitly:
+
+```
+neuroqp skill update --agent codex
+```
+
+## Install the NeuroQP skill for Claude Code
+
+From the root of your analysis project, run:
+
+```
+neuroqp skill install --agent claude
+```
+
+This installs the skill in `.claude/skills/neuroqp-python` for Claude Code to discover in the current project. To make the skill available to Claude Code across all your projects instead, use:
+
+```
+neuroqp skill install --agent claude --scope user
+```
+
+When a compatible skill update is available, Claude Code can mention it when the skill loads. Apply the update explicitly:
+
+```
+neuroqp skill update --agent claude
+```
+
+If you use both Codex and Claude Code, install or update both copies with `--agent all`.
+
+## Use an AI coding agent without installing the skill
+
+An AI coding agent can use the online AI-readable documentation without installing the NeuroQP skill. `llms.txt` is a concise index of the public documentation and links to expanded Markdown versions of every page. `llms-full.txt` contains the complete documentation in one file.
+
+Copy this prompt into your AI coding agent and replace the final sentence with the analysis you want to build:
+
+```
+I am using NeuroQP Python to analyze a NeuroQP project export. First read https://python.neuroqp.com/llms.txt and use the Markdown pages linked from it as the authoritative reference. Check the NeuroQP Python version installed in this project and prefer matching versioned documentation when available. Use only the public NeuroQP API, preserve the documented scientific meaning and alignment of exported data, and do not invent unavailable transformations or metadata.
+
+Help me write an analysis that [describe the analysis you want to perform].
+```
+
+The online documentation is sufficient when you prefer not to install agent-specific files. The installed skill is more convenient for repeated NeuroQP work because its essential workflow loads automatically when the agent recognizes a relevant task.
+
+# Quickstart
+
+Download the [synthetic v2 export](https://python.neuroqp.com/0.1/assets/downloads/neuroqp-example-v2.zip) or use a ZIP exported from NeuroQP.
+
+## Open a project
+
+```
+from neuroqp import open_export
+
+with open_export("neuroqp-example-v2.zip") as export:
+    print(export)
+    print(export.name)
+    print(export.version)
+```
+
+`open_export()` accepts a ZIP archive or an extracted export directory. It validates the archive before returning a `ProjectExport`.
+
+## Navigate objects
+
+```
+with open_export("neuroqp-example-v2.zip") as export:
+    animal = export.animal_by_name("Mouse 1")
+
+    for slice_ in animal.slices:
+        print(slice_.name, slice_.slice_coordinate_mm)
+        for image in slice_.images:
+            print(image.staining.name, image.metadata.original_filename)
+```
+
+Reader-bound objects remain usable only while the export is open. Pydantic metadata records and loaded NumPy results can be retained after the context manager exits.
+
+## Validate without opening
+
+```
+from neuroqp import validate_export
+
+report = validate_export("neuroqp-example-v2.zip")
+print(report.valid)
+
+for issue in report.issues:
+    print(issue.path, issue.code, issue.message)
+```
+
+Continue with the [object-navigation guide](https://python.neuroqp.com/0.1/guides/navigation/index.md) or run the [executable notebooks](https://python.neuroqp.com/0.1/examples/index.md).
+# Example notebooks
+
+# Example notebooks
+
+Use these notebooks as starting points for your own NeuroQP analysis. They work with the downloadable [synthetic v2 export](https://python.neuroqp.com/0.1/assets/downloads/neuroqp-example-v2.zip), so you can explore the package before using your own project data.
+
+- [Open and navigate an export](https://python.neuroqp.com/0.1/examples/open-and-navigate/index.md)
+- [Validate an export](https://python.neuroqp.com/0.1/examples/validate-export/index.md)
+
+Open a notebook in the documentation to read it, or use its download control to run and adapt the source locally. A downloaded notebook stores the small synthetic export beside itself the first time it runs. To use your own data, change `PROJECT_FILE` to the path of your project export.
+
+# Open and navigate an export
+
+This notebook downloads a small synthetic v2 export so you can run every cell immediately. When you are ready to analyze your own data, change `PROJECT_FILE` to the path of your NeuroQP ZIP.
+
+```python
+from pathlib import Path
+from urllib.request import urlretrieve
+
+from neuroqp import open_export
+
+PROJECT_FILE = Path("neuroqp-example-v2.zip")  # Change this to your own project export.
+EXAMPLE_URL = (
+    "https://raw.githubusercontent.com/neuroqp/neuroqp-python/"
+    "bc913cd/docs/assets/downloads/neuroqp-example-v2.zip"
+)
+if not PROJECT_FILE.is_file():
+    urlretrieve(EXAMPLE_URL, PROJECT_FILE)
+```
+
+```python
+with open_export(PROJECT_FILE) as export:
+    project_summary = export
+    animal = export.animals[0]
+    slice_ = animal.slices[0]
+    image = slice_.images[0]
+
+project_summary, animal, slice_, image
+```
+
+```
+(ProjectExport(name='Minimal project', id='project-1', version='v2', animals=1, slices=1, stainings=1, modules=('data',), closed=True),
+ Animal(id='animal-1', name='Mouse 1', slices=1),
+ Slice(id='slice-1', name='Slice 1', animal_id='animal-1', slice_coordinate_mm=-1.25, images=1),
+ Image(id='image-1', filename='minimal.tif', staining_id='staining-1', shape=(2, 2)))
+```
+
+```python
+with open_export(PROJECT_FILE) as export:
+    rows = [
+        (slice_.name, image.staining.name, image.metadata.original_filename)
+        for slice_ in export.slices
+        for image in slice_.images
+    ]
+
+rows
+```
+
+```
+[('Slice 1', 'DAPI', 'minimal.tif')]
+```
+
+# Validate an export
+
+Validation returns every metadata issue it can safely identify in one report. This notebook downloads a small synthetic export so you can run it immediately. To validate your own data, change `PROJECT_FILE` to the path of your NeuroQP ZIP.
+
+```python
+from pathlib import Path
+from urllib.request import urlretrieve
+
+from neuroqp import validate_export
+
+PROJECT_FILE = Path("neuroqp-example-v2.zip")  # Change this to your own project export.
+EXAMPLE_URL = (
+    "https://raw.githubusercontent.com/neuroqp/neuroqp-python/"
+    "bc913cd/docs/assets/downloads/neuroqp-example-v2.zip"
+)
+if not PROJECT_FILE.is_file():
+    urlretrieve(EXAMPLE_URL, PROJECT_FILE)
+
+report = validate_export(PROJECT_FILE)
+report
+```
+
+```
+ValidationReport(issues=())
+```
+
+```python
+assert report.valid
+assert report.issues == ()
+```
+# Concepts
+
+# Project exports
+
+A NeuroQP project export is either a ZIP archive or an extracted directory with the same member tree. The root `manifest.json` identifies the format version, project, included modules, and paths to common metadata.
+
+## Eager metadata, lazy arrays
+
+Opening an export reads and validates JSON and JSONL metadata. Images, masks, classification arrays, and match arrays remain inside the storage container until code explicitly opens or loads them.
+
+This boundary keeps normal navigation fast:
+
+```
+with open_export("project.zip") as export:
+    result_info = export.classification.classifications[0].result_index
+    # No result NPZ has been loaded yet.
+```
+
+Artifact streams read from the source incrementally. Opening an image from an extracted export does not copy it into memory; opening one from a ZIP decompresses bytes as they are read.
+
+## Large exports
+
+Direct ZIP access is limited to 4 GiB of declared uncompressed members by default. This conservative boundary prevents an apparently small or untrusted archive from expanding without a practical limit.
+
+For a trusted NeuroQP ZIP above that limit, extract it with your normal archive tool and pass the resulting folder to `open_export()`:
+
+```
+with open_export("path/to/extracted-project-export") as export:
+    print(export)
+```
+
+Extracted directories have no aggregate byte limit because their files already occupy visible disk space. Path containment, symbolic-link, member-count, metadata-size, and NumPy pickle protections remain active. Do not extract an archive rejected for an unsafe path, unsafe link, or suspicious compression ratio.
+
+## Optional modules
+
+The v2 format can contain three modules:
+
+| Module           | Python access                   | Content                                                   |
+| ---------------- | ------------------------------- | --------------------------------------------------------- |
+| `data`           | `export.slices`, `slice.images` | Project metadata and image artifacts                      |
+| `registration`   | `export.registration`           | Atlas identity, landmarks, and detail transforms          |
+| `classification` | `export.classification`         | Classifiers, samples, classification results, and matches |
+
+An absent optional module is represented by `None`. Do not infer module availability from individual files.
+
+## Compatibility
+
+The SDK currently supports export v2. The [v2 specification](https://python.neuroqp.com/0.1/specifications/export-v2/index.md) is normative. When a future version is added, current documentation will retain every supported specification and point “current” to the newest one.
+
+# Object model
+
+`ProjectExport` is the starting point for navigating a project:
+
+```
+ProjectExport
+├── animals → Animal → slices → Slice
+│                         ├── images → Image
+│                         ├── cell_mask → FileArtifact | None
+│                         └── registration → SliceRegistration | None
+├── stainings → Staining
+├── atlas → Atlas | None
+├── registration → Registration | None
+└── classification → ClassificationModule | None
+                          ├── classifications → Classification
+                          └── matches → Match
+```
+
+## Keep the export open while navigating
+
+Use `open_export()` as a context manager. Objects such as animals, slices, images, registrations, classifications, matches, and file artifacts use the open ZIP or directory to follow relationships and load files.
+
+```
+from pathlib import Path
+
+from neuroqp import open_export
+
+PROJECT_FILE = Path("path/to/project-export.zip")
+
+with open_export(PROJECT_FILE) as export:
+    animal = export.animals[0]
+    slice_ = animal.slices[0]
+    image = slice_.images[0]
+    print(animal.name, slice_.name, image.staining.name)
+```
+
+When the `with` block ends, the export closes automatically. Further navigation or file loading raises `ClosedExportError`:
+
+```
+from neuroqp import ClosedExportError
+
+try:
+    print(slice_.images)
+except ClosedExportError:
+    print("The export is already closed.")
+```
+
+## Data you can keep after closing
+
+Copy or load the information needed for later analysis while the export is open:
+
+| Safe after closing        | Examples                                                            |
+| ------------------------- | ------------------------------------------------------------------- |
+| Metadata records          | `slice_.metadata`, `image.metadata`, `export.project`               |
+| Plain Python values       | IDs, names, dictionaries, lists, numbers                            |
+| Loaded scientific results | `classification.load_result(...)`, `classification.load_results()`  |
+| Loaded image data         | Encoded bytes, a decoded NumPy array, or a separately stored memmap |
+
+```
+with open_export(PROJECT_FILE) as export:
+    slice_ = export.slices[0]
+    slice_metadata = slice_.metadata
+    project_metadata = export.project
+
+    image = slice_.images[0]
+    image_metadata = image.metadata
+    with image.open() as stream:
+        image_bytes = stream.read()
+
+print(project_metadata.name)
+print(slice_metadata.name, image_metadata.original_filename)
+print(len(image_bytes))
+```
+
+Metadata records are immutable snapshots. They remain safe because they do not need to read another export member. Loaded result containers own their NumPy arrays, so those arrays also remain available after closing.
+
+Streams returned by `open()` and paths yielded by `as_path()` are storage-backed resources. Open and consume them inside the parent export context. For ZIP exports, an `as_path()` path is a temporary copy and disappears when its own context exits. A memmap remains usable only while its separately decoded backing file exists.
+
+## Data that still needs the open export
+
+Keep the context open for:
+
+- moving between animals, slices, stainings, images, registrations, classifications, and matches;
+- calling `image.open()`, `image.as_path()`, `artifact.open()`, `artifact.as_path()`, or `export.member()`;
+- loading classification or match arrays that have not yet been read;
+- listing raw archive members.
+
+For a long notebook analysis, it is fine to keep one `with open_export(...)` block around the cells that navigate and load data. For repeated functions, open the export inside the function or pass an already-open export and call the function before the context closes.
+# Guides
+
+# Navigate a project
+
+Set the export path once at the start of your script or notebook:
+
+```
+from pathlib import Path
+
+from neuroqp import open_export
+
+PROJECT_FILE = Path("path/to/project-export.zip")
+```
+
+## Start by listing what is available
+
+Names are convenient for exploration, while IDs are the reliable keys for lookups and joins. IDs are opaque strings: store and compare them, but do not infer scientific meaning from their format.
+
+```
+with open_export(PROJECT_FILE) as export:
+    print("Project:", export.name, export.id)
+
+    for animal in export.animals:
+        print("Animal:", animal.name, animal.id)
+
+    for staining in export.stainings:
+        print("Staining:", staining.name, staining.id)
+
+    for region in export.brain_regions:
+        print("Region:", region.name, region.acronym, region.structure_id)
+```
+
+Use an ID when you already have one:
+
+```
+with open_export(PROJECT_FILE) as export:
+    animal = export.animal("animal-id")
+    slice_ = export.slice("slice-id")
+    staining = export.staining("staining-id")
+    region = export.brain_region(599)
+```
+
+Use a name when it is more natural for an interactive analysis:
+
+```
+with open_export(PROJECT_FILE) as export:
+    animal = export.animal_by_name("Mouse 1")
+    staining = export.staining_by_name("NeuN")
+```
+
+`animal_by_name()` and `staining_by_name()` require an exact, unique name. They raise `ObjectNotFoundError` when nothing matches and `AmbiguousNameError` when several objects have that name.
+
+## Move from animals to slices
+
+Each slice belongs to one animal. Iterate through `animal.slices` when the animal is your experimental unit:
+
+```
+with open_export(PROJECT_FILE) as export:
+    for animal in export.animals:
+        for slice_ in animal.slices:
+            print(animal.name, slice_.name, slice_.slice_coordinate_mm, slice_.id)
+```
+
+To search across the complete project, use `find_slices()`. It returns a tuple because slice names do not have to be unique:
+
+```
+with open_export(PROJECT_FILE) as export:
+    matching_slices = export.find_slices(name="Slice 1")
+    for slice_ in matching_slices:
+        print(slice_.animal.name, slice_.id)
+```
+
+Slice-name matching is exact. Prefer `slice.id` when keeping results for later joins.
+
+## Find stainings and images
+
+`find_stainings()` is useful when spelling, capitalization, or punctuation varies. For example, `"D-A P_I"` matches `"DAPI"`. It still returns every match rather than assuming the name is unique.
+
+```
+with open_export(PROJECT_FILE) as export:
+    dapi_matches = export.find_stainings("D-A P_I")
+    for staining in dapi_matches:
+        print(staining.name, staining.id)
+```
+
+Images belong to slices. Filter them by a staining object, staining ID, exact staining name, magnification label, original filename, or any combination:
+
+```
+with open_export(PROJECT_FILE) as export:
+    staining = export.staining_by_name("NeuN")
+
+    for slice_ in export.slices:
+        for image in slice_.find_images(staining=staining, magnification="10x"):
+            print(slice_.name, image.metadata.original_filename, image.metadata.width, image.metadata.height)
+```
+
+Use `slice_.image("image-id")` when you already know the unique image ID. Continue with [Images and masks](https://python.neuroqp.com/0.1/guides/images/index.md) to load image pixels and interpret their scale.
+
+## Find brain regions
+
+Atlas structure IDs are the unique brain-region keys. Name and acronym filters return tuples because labels are not treated as unique identifiers:
+
+```
+with open_export(PROJECT_FILE) as export:
+    region = export.brain_region(599)
+    cm_regions = export.find_brain_regions(acronym="CM")
+    named_regions = export.find_brain_regions(name="Central medial nucleus of the thalamus")
+```
+
+Brain-region metadata describes the project annotation set. It does not assign cells or image coordinates to regions.
+
+## Check optional modules
+
+Registration and classification are optional. Check them before navigating their contents:
+
+```
+with open_export(PROJECT_FILE) as export:
+    if export.registration is not None:
+        print("Atlas:", export.registration.atlas.name)
+
+    if export.classification is not None:
+        for classification in export.classification.classifications:
+            print("Classification:", classification.staining.name)
+        for match in export.classification.matches:
+            print("Match:", match.pair_key, match.staining_a.name, match.staining_b.name)
+```
+
+An absent module is `None`; an empty collection means the module was included but contains no objects of that kind.
+
+# Images and masks
+
+NeuroQP exports the image artifacts referenced by the project snapshot. These are the files stored by NeuroQP at export time, not a guarantee of untouched microscope acquisition data. `original_filename` records the uploaded filename; `archive_path` identifies the exact copy inside the export.
+
+TIFF decoding, LZW support, and region selection are included with NeuroQP Python. The package gives `tifffile` safe access to the exported file while leaving pixel-processing choices under your control.
+
+## Choose an access method
+
+| Goal                                             | Recommended method                                      | Memory and disk behavior                                 |
+| ------------------------------------------------ | ------------------------------------------------------- | -------------------------------------------------------- |
+| Inspect dimensions, dtype, pages, or compression | `TiffFile(image.open())`                                | Reads TIFF metadata without decoding the complete image  |
+| Load a small complete image                      | `imread(image.open())`                                  | Allocates the complete decoded array in RAM              |
+| Process a large complete image                   | `page.asarray(out=...)`                                 | Decodes to a disk-backed NumPy memmap                    |
+| Extract a few patches                            | `imread(path, selection=...)` through `image.as_path()` | Decodes only strips intersecting each region             |
+| Extract many patches from one image              | Decode once to a memmap, then slice it                  | Uses disk instead of repeatedly decoding the same strips |
+| Apply an incremental algorithm                   | `page.segments()`                                       | Yields one decoded strip at a time                       |
+| Process every project image                      | Handle one image at a time                              | Bounds peak memory and temporary-disk use                |
+
+`image.size_bytes` is the encoded TIFF-file size. It does not predict decoded memory. TIFF compression can make a small stored file expand into a much larger pixel array.
+
+## Inspect image metadata without decoding pixels
+
+Images are grouped by slice and staining. Open the TIFF header to inspect the actual stored array:
+
+```
+from math import prod
+from pathlib import Path
+
+from tifffile import TiffFile
+
+from neuroqp import open_export
+
+PROJECT_FILE = Path("path/to/project-export.zip")
+
+with open_export(PROJECT_FILE) as export:
+    image = export.slices[0].images[0]
+    with image.open() as stream, TiffFile(stream) as tif:
+        page = tif.pages[0]
+        decoded_bytes = prod(page.shape) * page.dtype.itemsize
+        print("filename:", image.metadata.original_filename)
+        print("stored bytes:", image.size_bytes)
+        print("pages:", len(tif.pages))
+        print("shape:", page.shape)
+        print("dtype:", page.dtype)
+        print("compression:", page.compression)
+        print("estimated decoded bytes:", decoded_bytes)
+```
+
+The estimate covers one page and does not include temporary arrays created by your analysis. TIFF files may contain channels, pages, or other leading dimensions, so inspect `page.shape` rather than assuming a two-dimensional array.
+
+## Load a small complete image
+
+Use this approach only when the decoded array and the arrays created by your analysis comfortably fit in memory:
+
+```
+from tifffile import imread
+
+with open_export(PROJECT_FILE) as export:
+    image = export.slices[0].images[0]
+    with image.open() as stream:
+        pixels = imread(stream)
+
+print(pixels.shape, pixels.dtype)
+```
+
+The NumPy array owns its pixels and remains usable after the export closes. For a two-dimensional image, NeuroQP `(x, y)` coordinates index the array as `pixels[y, x]`.
+
+## Decode a large image to disk
+
+A compressed, strip-based TIFF cannot be memory-mapped directly. Decode it once into a raw disk-backed array when the complete image is needed but should not occupy RAM:
+
+```
+from pathlib import Path
+
+import numpy as np
+from tifffile import TiffFile
+
+SCRATCH = Path("analysis-scratch")
+SCRATCH.mkdir(exist_ok=True)
+DECODED_FILE = SCRATCH / "decoded-image.memmap"
+
+with open_export(PROJECT_FILE) as export:
+    image = export.slices[0].images[0]
+    with image.as_path(directory=SCRATCH) as image_path:
+        with TiffFile(image_path) as tif:
+            pixels = tif.pages[0].asarray(out=str(DECODED_FILE))
+
+        assert isinstance(pixels, np.memmap)
+        print(pixels.shape, pixels.dtype)
+        # Run analysis while pixels is open.
+        pixels.flush()
+        del pixels
+```
+
+For a ZIP export, `image.as_path()` first copies the encoded TIFF into `SCRATCH` and removes that copy when the context exits. `DECODED_FILE` is separate and remains until you delete it. Plan disk space for both files plus analysis outputs. For an extracted export, `image.as_path()` yields the existing TIFF without copying it.
+
+## Extract a few patches
+
+For a small number of regions, use TIFF/Zarr selection. Coordinates below are array bounds in `(y, x)` order:
+
+```
+from tifffile import imread
+
+SCRATCH.mkdir(exist_ok=True)
+
+with open_export(PROJECT_FILE) as export:
+    image = export.slices[0].images[0]
+    with image.as_path(directory=SCRATCH) as image_path:
+        patch = imread(
+            image_path,
+            selection=(slice(500, 756), slice(1000, 1256)),
+        )
+
+print(patch.shape)
+```
+
+NeuroQP TIFFs are normally LZW-compressed and organized in horizontal strips rather than tiles. A region read avoids unrelated strips, but every intersecting strip is decoded across its full width. Repeated patch reads from the same strips can therefore perform much more work than their patch dimensions suggest.
+
+## Extract many centroid patches
+
+When extracting many patches from one image, decode the image once to a disk-backed array and slice that array repeatedly. Group classification results by source image or slice before moving to the next TIFF.
+
+```
+from pathlib import Path
+
+from tifffile import TiffFile
+
+PATCH_RADIUS = 32
+DECODED_FILE = SCRATCH / "centroid-source.memmap"
+
+with open_export(PROJECT_FILE) as export:
+    image = export.slices[0].images[0]
+    classification = export.classification
+    if classification is None:
+        raise RuntimeError("This export has no classification module.")
+
+    result = classification.classifications[0].load_result(image.slice.id)
+    with image.as_path(directory=SCRATCH) as image_path:
+        with TiffFile(image_path) as tif:
+            pixels = tif.pages[0].asarray(out=str(DECODED_FILE))
+
+        height, width = pixels.shape[:2]
+        patches = {}
+        for cell_id, (x, y) in zip(result.cell_ids, result.centroids, strict=True):
+            x_center = round(float(x))
+            y_center = round(float(y))
+            x0 = max(0, x_center - PATCH_RADIUS)
+            x1 = min(width, x_center + PATCH_RADIUS)
+            y0 = max(0, y_center - PATCH_RADIUS)
+            y1 = min(height, y_center + PATCH_RADIUS)
+            patches[int(cell_id)] = pixels[y0:y1, x0:x1].copy()
+
+        del pixels
+```
+
+Only combine centroids with an image known to use the same pixel grid. A shared-detection result refers to the shared cell mask; an independent-detection result refers to its staining-specific source. Matching slice IDs alone does not prove pixel alignment.
+
+## Process strips incrementally
+
+Use `segments()` when an algorithm can consume independent horizontal blocks and does not require the complete image:
+
+```
+from tifffile import TiffFile
+
+with open_export(PROJECT_FILE) as export:
+    image = export.slices[0].images[0]
+    with image.as_path(directory=SCRATCH) as image_path:
+        with TiffFile(image_path) as tif:
+            for decoded_strip, position, shape in tif.pages[0].segments():
+                print(position, shape, decoded_strip.mean())
+```
+
+Strip processing requires explicit boundary and position handling. Prefer a disk-backed complete decode when the algorithm needs neighbouring rows across strip boundaries or global image context.
+
+## Process every image
+
+Keep the export open, but finish each image before opening the next:
+
+```
+from tifffile import TiffFile
+
+with open_export(PROJECT_FILE) as export:
+    for slice_ in export.slices:
+        for image in slice_.images:
+            with image.open() as stream, TiffFile(stream) as tif:
+                page = tif.pages[0]
+                print(slice_.id, image.id, page.shape, page.dtype)
+            # Decode or materialize this image here, write its result, then
+            # release its arrays and temporary files before continuing.
+```
+
+Do not accumulate complete decoded images for the entire project unless their combined decoded size has been measured and intentionally fits your resources.
+
+## Determine the pixel size
+
+Pixel size is project metadata associated with the whole-slice and detail-image labels:
+
+```
+with open_export(PROJECT_FILE) as export:
+    image = export.slices[0].images[0]
+    magnification = image.metadata.magnification
+
+    if magnification == export.project.whole_slice_label:
+        microns_per_pixel = export.project.whole_slice_microns_per_pixel
+    elif magnification == export.project.detail_image_label:
+        microns_per_pixel = export.project.detail_microns_per_pixel
+    else:
+        microns_per_pixel = None
+
+    print(magnification, microns_per_pixel)
+```
+
+Treat `None` as an unrecognized or custom image label. Do not infer physical scale from the filename. Classification centroids remain in source-image or mask pixels; multiplying by a pixel size converts distances but does not perform atlas registration.
+
+## Load the cell mask
+
+A slice may contain the shared cell-count detection mask:
+
+```
+from tifffile import imread
+
+with open_export(PROJECT_FILE) as export:
+    slice_ = export.slices[0]
+    mask_artifact = slice_.cell_mask
+
+    if mask_artifact is None:
+        print("No cell mask was exported for this slice.")
+    else:
+        with mask_artifact.open() as stream:
+            cell_mask = imread(stream)
+        print(cell_mask.shape, cell_mask.dtype)
+```
+
+The mask is copied into the export without decoding or transformation. For a classification result with `metadata.source.kind == "shared_detection"`, its `cell_ids` refer to labels in this shared mask. An `independent_detection` result uses a staining-specific detection source and must not be joined to this mask by cell ID. Compare shapes before overlaying data; do not assume that every image or detection source for a slice uses the same pixel grid.
+
+## Resize or convert an image
+
+NeuroQP Python deliberately returns standard NumPy arrays instead of owning a resize or conversion API. Use an established scientific-image library after opening or decoding the TIFF.
+
+- Record the interpolation method, output shape, and resulting physical pixel size.
+- Use anti-aliasing when downsampling continuous intensity images.
+- Preserve dtype and value range unless the analysis explicitly requires normalization.
+- Resize label masks only with nearest-neighbour interpolation; other interpolation creates nonexistent label values.
+- Keep a lossless TIFF or another analysis-appropriate scientific format for quantitative work. Treat JPEG and other lossy formats as visualization outputs, not analysis sources.
+
+For exceptional files without a high-level object, use the [low-level access guide](https://python.neuroqp.com/0.1/guides/low-level/index.md).
+
+# Validate and inspect
+
+Use `validate` to check whether an export can be opened safely. Use `inspect` when you also want a readable project summary.
+
+## Inspect an export
+
+```
+neuroqp inspect neuroqp-example-v2.zip
+```
+
+Example output:
+
+```
+Validation
+  Status: valid
+  Source: neuroqp-example-v2.zip
+
+Export
+  Format: v2
+  ID: export-1
+  Exported: 2026-07-28T12:00:00+00:00
+  Expires: 2026-08-04T12:00:00+00:00
+
+Project
+  Name: Minimal project
+  ID: project-1
+  Type: 10x
+  Whole-slice image: 4x (4.2975 µm/pixel)
+  Detail image: 10x (1.719 µm/pixel)
+
+Modules
+  data: included
+  registration: not included
+  classification: not included
+
+Atlas
+  None
+
+Contents
+  Animals: 1
+    - Mouse 1 (animal-1)
+  Slices: 1
+  Stainings: 1
+    - DAPI (staining-1)
+  Brain regions: 1
+    - Central medial nucleus of the thalamus (CM, 599)
+
+Classifier selections
+  None
+```
+
+The sections mean:
+
+| Section               | Meaning                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| Validation            | Whether metadata validation passed and which file or directory was inspected            |
+| Export                | Export-format version, snapshot identity, creation time, and expiry recorded by NeuroQP |
+| Project               | Project identity, imaging labels, and physical pixel sizes                              |
+| Modules               | Which data, registration, and classification modules were requested and included        |
+| Atlas                 | Atlas identity and version, or `None` when no atlas is included                         |
+| Contents              | Counts plus human-readable names and IDs for key project objects                        |
+| Classifier selections | Selected classifier ID for each staining when classification data is included           |
+
+`inspect` validates before displaying metadata. For an invalid export it prints the validation issues instead of a partial project summary.
+
+## Inspect as JSON
+
+Use JSON when a script, workflow manager, or data inventory needs the summary:
+
+```
+neuroqp inspect neuroqp-example-v2.zip --json
+```
+
+The current JSON structure is:
+
+```
+{
+  "valid": true,
+  "source": "neuroqp-example-v2.zip",
+  "exportVersion": "v2",
+  "exportId": "export-1",
+  "exportedAt": "2026-07-28T12:00:00+00:00",
+  "expiresAt": "2026-08-04T12:00:00+00:00",
+  "project": {
+    "id": "project-1",
+    "name": "Minimal project",
+    "type": "10x",
+    "atlasId": null,
+    "comments": null,
+    "wholeSlice": {
+      "label": "4x",
+      "micronsPerPixel": 4.2975
+    },
+    "detailImage": {
+      "label": "10x",
+      "micronsPerPixel": 1.719
+    }
+  },
+  "atlas": null,
+  "modules": ["data"],
+  "counts": {
+    "animals": 1,
+    "slices": 1,
+    "stainings": 1,
+    "brainRegions": 1
+  },
+  "animals": [
+    {"id": "animal-1", "name": "Mouse 1"}
+  ],
+  "stainings": [
+    {"id": "staining-1", "name": "DAPI"}
+  ],
+  "brainRegions": [
+    {
+      "structureId": 599,
+      "name": "Central medial nucleus of the thalamus",
+      "acronym": "CM"
+    }
+  ],
+  "selectedClassifierHeadIdsByStaining": {},
+  "linkedTrainingRunIdsByStaining": {}
+}
+```
+
+`atlas` is either `null` or an object with `id`, `key`, `version`, and `name`. Collection fields are always arrays, mapping fields are always objects, and timestamps are ISO 8601 strings with a timezone offset.
+
+When the export is invalid, `inspect --json` returns the validation structure shown below instead of the project-summary structure.
+
+## Validate an export
+
+```
+neuroqp validate path/to/project.zip
+```
+
+A valid export produces:
+
+```
+Valid NeuroQP v2 export: path/to/project.zip
+```
+
+An invalid export lists every issue that can be discovered safely in the same pass:
+
+```
+Invalid NeuroQP export: path/to/project.zip
+- project/slices.json [0.animalId]: slice references unknown animal animal-99 (unknown_animal)
+- data/slices/slice-1/images.json [0.archivePath]: archivePath must be data/slices/slice-1/images/image-1__cells.tif (invalid_archive_path)
+```
+
+Each issue contains:
+
+- `path`: the file or archive member where the problem was found;
+- `field`: the specific JSON field or array name when available;
+- `message`: a human-readable explanation;
+- `code`: a stable machine-readable category.
+
+Common issue codes and responses:
+
+| Code or family                                                                                    | What it usually means                                                            | What to do                                                                                     |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `not_found`, `invalid_container`                                                                  | The path is wrong, the download is incomplete, or the file is not a readable ZIP | Check the path and download the export again                                                   |
+| `missing_member`                                                                                  | A required metadata, image, mask, or result file is absent                       | Create a new export; do not manually assemble missing members                                  |
+| `invalid_json`, `invalid_utf8`, `invalid_field`                                                   | Metadata is malformed or a required value has the wrong type                     | Re-export the project and report the issue if it repeats                                       |
+| `unsupported_version`                                                                             | The package does not support this export-format version                          | Upgrade NeuroQP Python or use documentation for the exported version                           |
+| `duplicate_*`                                                                                     | An ID, name, archive member, image, or result appears more than allowed          | Re-export; this is an inconsistent snapshot                                                    |
+| `invalid_reference`, `unknown_*`                                                                  | Metadata points to an animal, slice, staining, image, or result that is absent   | Re-export and report the repeated consistency error                                            |
+| `inconsistent_*`, `invalid_archive_path`                                                          | Two records disagree about an identity, path, atlas, or slice                    | Re-export and report the repeated consistency error                                            |
+| `unsafe_path`, `unsafe_link`                                                                      | The container includes a path or link that could escape the export               | Do not open or extract it; obtain a fresh export                                               |
+| `size_limit`                                                                                      | A ZIP declares more than the default 4 GiB of uncompressed members               | If it is a trusted NeuroQP export, extract it and pass the resulting folder to `open_export()` |
+| `member_limit`                                                                                    | The container contains more files than the configured safety limit               | Confirm that the source is a genuine export before changing the limit                          |
+| `compression_limit`                                                                               | A ZIP member has a suspicious declared compression ratio                         | Do not extract it or disable the check; obtain a fresh trusted export                          |
+| `invalid_npz`, `invalid_array`, `array_length`                                                    | A classification or match result archive has missing or incompatible arrays      | Create a new export and report the result-generation problem                                   |
+| `threshold_mismatch`, `count_mismatch`, `index_mismatch`, `invalid_fraction`, `duplicate_cell_id` | Scientific result arrays disagree with their exported metadata or invariants     | Do not analyze that result; re-export and report the problem                                   |
+
+Use `--json` to receive the same validation result as structured data:
+
+```
+neuroqp validate path/to/project.zip --json
+```
+
+```
+{
+  "valid": false,
+  "issues": [
+    {
+      "path": "project/slices.json",
+      "field": "0.animalId",
+      "code": "unknown_animal",
+      "message": "slice references unknown animal animal-99"
+    }
+  ]
+}
+```
+
+Both commands return exit status `0` for a valid export and `1` for an invalid export.
+
+## Validate from Python
+
+`validate_export()` returns a report instead of raising for validation problems:
+
+```
+from pathlib import Path
+
+from neuroqp import validate_export
+
+PROJECT_FILE = Path("path/to/project-export.zip")
+
+report = validate_export(PROJECT_FILE)
+if report.valid:
+    print("The export is valid.")
+else:
+    for issue in report.issues:
+        location = f"{issue.path} [{issue.field}]" if issue.field else issue.path
+        print(location, issue.code, issue.message)
+```
+
+Metadata, cross-references, container safety, and result indexes are checked during `validate_export()`. Classification and match NPZ arrays remain lazy and are checked when `load_result()` or `load_results()` reads them.
+
+## Resource limits
+
+Use `ExportLimits` only when a trusted export has unusually large metadata or an unusual number of members:
+
+```
+from neuroqp import ExportLimits, validate_export
+
+limits = ExportLimits(max_metadata_bytes=16 * 1024**2)
+report = validate_export(PROJECT_FILE, limits=limits)
+```
+
+Path-safety checks and NumPy pickle protection cannot be disabled.
+
+The 4 GiB default applies to the total declared uncompressed size of ZIP members, not to extracted directories. For a larger trusted ZIP, prefer extracting it and opening the resulting folder instead of increasing `max_total_uncompressed_bytes`. Directory exports retain member, metadata, path, link, and pickle protections without an aggregate file-size check.
+
+# Classification and cell matches
+
+Classification data is available only when the export includes the classification module. All result arrays are loaded on demand and remain usable after the export closes.
+
+## Discover available results
+
+Do not guess staining names or match keys. Inspect what the export contains:
+
+```
+from neuroqp import open_export
+
+with open_export("project.zip") as export:
+    module = export.classification
+    if module is None:
+        raise RuntimeError("This export does not include classification data.")
+
+    for classification in module.classifications:
+        print(
+            classification.staining.name,
+            classification.classifier.display_name,
+            len(classification.result_index),
+        )
+
+    for match in module.matches:
+        print(match.pair_key, match.staining_a.name, match.staining_b.name)
+```
+
+Pass an exact staining name, staining ID, or `Staining` object to `for_staining()`. Pass one of the displayed `pair_key` values to `match()`.
+
+## Load classification results
+
+Load one slice when you need its result:
+
+```
+from neuroqp import open_export
+
+with open_export("project.zip") as export:
+    module = export.classification
+    if module is None:
+        raise RuntimeError("This export does not include classification data.")
+
+    classification = module.for_staining("NeuN")
+    slice_ = export.slices[0]
+    result = classification.load_result(slice_)
+
+    print(result)
+    print(result.cell_ids)
+    print(result.centroids)
+    print(result.probabilities)
+    print(result.is_positive)
+```
+
+The arrays align by row:
+
+| Array           | Shape    | Meaning                                        |
+| --------------- | -------- | ---------------------------------------------- |
+| `cell_ids`      | `(N,)`   | Cell labels from the source detection mask     |
+| `centroids`     | `(N, 2)` | Cell centres as `(x, y)` image pixels          |
+| `probabilities` | `(N,)`   | Classifier probability for each cell           |
+| `is_positive`   | `(N,)`   | Authoritative positive/negative classification |
+
+For a row index `i`, all four arrays describe the same detected cell. `is_positive` is validated against `probabilities >= result.threshold`; use it when you want the classification exported by NeuroQP. Apply a different probability threshold only when your analysis intentionally reclassifies the cells.
+
+Centroid coordinates use the source detection image or mask coordinate system. `(0, 0)` is the top-left, x increases to the right, and y increases downward. They are pixels, not micrometres or atlas coordinates. NeuroQP Python does not yet transform these centroids into atlas space.
+
+Load and concatenate all available slices when vectorized analysis is more convenient:
+
+```
+from neuroqp import open_export
+
+with open_export("project.zip") as export:
+    module = export.classification
+    if module is None:
+        raise RuntimeError("This export does not include classification data.")
+
+    results = module.for_staining("NeuN").load_results()
+    positive_rows = results.is_positive
+
+    positive_slice_ids = results.slice_ids[positive_rows]
+    positive_cell_ids = results.cell_ids[positive_rows]
+    positive_centroids = results.centroids[positive_rows]
+```
+
+`slice_ids`, `cell_ids`, `centroids`, `probabilities`, and `is_positive` remain aligned after concatenation. Cell IDs are labels in a slice-level detection mask and can repeat between slices, so use `(slice_id, cell_id)` as the unique cell key. Slice-specific thresholds and metadata remain available through `results.by_slice`.
+
+## Training samples and omitted slices
+
+Training samples are metadata and do not load result arrays:
+
+```
+from neuroqp import open_export
+
+with open_export("project.zip") as export:
+    module = export.classification
+    if module is None:
+        raise RuntimeError("This export does not include classification data.")
+
+    classification = module.for_staining("NeuN")
+    positive_samples = classification.find_training_samples(label="on")
+
+    for omission in classification.omitted_slices:
+        print(omission.slice_name, omission.reason_code, omission.reason)
+```
+
+An omitted slice is not a zero count. It has no result because the exporter recorded a specific reason, such as a missing or outdated source. Keep omissions visible when building analysis tables instead of silently replacing them with zeros.
+
+## Load and interpret cell matches
+
+Match keys are opaque export identifiers. Discover them from `module.matches`, then load the selected match:
+
+```
+from neuroqp import open_export
+
+with open_export("project.zip") as export:
+    module = export.classification
+    if module is None or not module.matches:
+        raise RuntimeError("This export does not include cell matches.")
+
+    available = module.matches[0]
+    match = module.match(available.pair_key)
+    result = match.load_result(match.result_index[0].slice_id)
+
+    print(result.metadata.side_a.staining.name)
+    print(result.metadata.side_b.staining.name)
+    print(result.cell_ids_a, result.cell_ids_b)
+    print(result.iou)
+
+    for omission in match.omitted_slices:
+        print(omission.slice_name, omission.reason_code, omission.reason)
+```
+
+Each row describes one one-to-one matched pair. Side A arrays align with `result.metadata.side_a`; side B arrays align with `result.metadata.side_b`. Always read these metadata records because the NPZ side order can differ from the staining order suggested by a pair key.
+
+The match measurements are:
+
+| Value                  | Definition                                                  |
+| ---------------------- | ----------------------------------------------------------- |
+| `intersection_area`    | Pixels shared by both cell masks                            |
+| `area_a`, `area_b`     | Pixel area of each cell mask                                |
+| `overlap_fraction_a`   | `intersection_area / area_a`                                |
+| `overlap_fraction_b`   | `intersection_area / area_b`                                |
+| `overlap_fraction_min` | Smaller of the two overlap fractions                        |
+| `iou`                  | `intersection_area / (area_a + area_b - intersection_area)` |
+
+All fractions and IoU are between 0 and 1. Retained pairs satisfy `overlap_fraction_min >= overlap_threshold`, and each cell occurs at most once on its side. Match centroids use the source mask's `(x, y)` pixel coordinates. As with classifications, keep omitted matches separate from measured zero matches.
+
+## Aggregate results by animal and experimental group
+
+Pandas is optional but convenient for analysis tables:
+
+```
+python -m pip install pandas
+```
+
+Build one row per analyzed slice, then aggregate to the animal level before comparing groups:
+
+```
+import pandas as pd
+
+from neuroqp import open_export
+
+rows = []
+
+with open_export("project.zip") as export:
+    module = export.classification
+    if module is None:
+        raise RuntimeError("This export does not include classification data.")
+
+    classification = module.for_staining("NeuN")
+
+    for info in classification.result_index:
+        slice_ = export.slice(info.slice_id)
+        animal = slice_.animal
+        result = classification.load_result(slice_)
+        detected_cells = int(result.cell_ids.size)
+        positive_cells = int(result.is_positive.sum())
+
+        rows.append(
+            {
+                "animal_id": animal.id,
+                "animal": animal.name,
+                "group": animal.metadata.group,
+                "condition": animal.metadata.condition,
+                "slice_id": slice_.id,
+                "slice": slice_.name,
+                "ap_mm": slice_.slice_coordinate_mm,
+                "positive_cells": positive_cells,
+                "detected_cells": detected_cells,
+            }
+        )
+
+if not rows:
+    raise RuntimeError("This staining has no classification results.")
+
+per_slice = pd.DataFrame(rows)
+
+per_animal = (
+    per_slice.groupby(
+        ["animal_id", "animal", "group", "condition"],
+        dropna=False,
+        as_index=False,
+    )
+    .agg(
+        slices=("slice_id", "nunique"),
+        positive_cells=("positive_cells", "sum"),
+        detected_cells=("detected_cells", "sum"),
+    )
+)
+per_animal["positive_fraction"] = (
+    per_animal["positive_cells"]
+    / per_animal["detected_cells"].replace(0, pd.NA)
+)
+
+group_summary = (
+    per_animal.groupby(["group", "condition"], dropna=False, as_index=False)
+    .agg(
+        n_animals=("animal_id", "nunique"),
+        mean_positive_cells=("positive_cells", "mean"),
+        sem_positive_cells=("positive_cells", "sem"),
+        mean_positive_fraction=("positive_fraction", "mean"),
+    )
+)
+
+print(group_summary)
+```
+
+Choose the aggregation that matches the experimental design. If the animal is the experimental unit, do not treat individual cells or slices as independent replicates. Keep `classification.omitted_slices` beside the result table so missing analyses remain distinguishable from measured zero counts.
+
+The SDK validates required array names, dtypes, shapes, lengths, fraction ranges, masks, thresholds, declared counts, and one-to-one match constraints when results load. NumPy archives are always opened with `allow_pickle=False`.
+
+# Low-level access
+
+The high-level object graph should cover normal analysis. Use [Images and masks](https://python.neuroqp.com/0.1/guides/images/index.md) for exported image data. Use raw member access when you need bytes that the SDK deliberately does not interpret.
+
+## List archive members
+
+```
+with open_export("project.zip") as export:
+    for path in sorted(export.members):
+        print(path)
+```
+
+## Read one member
+
+```
+with open_export("project.zip") as export:
+    artifact = export.member("manifest.json")
+    print(artifact.size_bytes)
+    with artifact.open() as stream:
+        payload = stream.read()
+```
+
+Each `open()` call returns an independent binary stream. Directory members are read directly from their existing files; ZIP members are decompressed as the stream is read.
+
+If a library requires a filesystem path, use `as_path()`:
+
+```
+from pathlib import Path
+
+SCRATCH = Path("analysis-scratch")
+SCRATCH.mkdir(exist_ok=True)
+
+with open_export("project.zip") as export:
+    artifact = export.member("data/slices/slice-1/images/image-1__cells.tif")
+    with artifact.as_path(directory=SCRATCH) as path:
+        use_library_that_requires_a_path(path)
+```
+
+An extracted export yields its existing member path. A ZIP member is copied into a temporary directory under `SCRATCH` and removed when the context exits.
+
+## Keep the safety boundary
+
+Do not use raw access to bypass validation or to load NumPy object arrays. If a supported v2 member is missing from the high-level API, open an issue rather than depending on private modules such as `neuroqp._reader`.
+# API reference
+
+# Entry points
+
+## open_export
+
+```
+open_export(
+    source: str | Path,
+    *,
+    limits: ExportLimits | None = None,
+) -> ProjectExport
+```
+
+Open and validate a local v2 ZIP archive or extracted directory.
+
+Parameters:
+
+| Name     | Type           | Description | Default                                                                                                        |
+| -------- | -------------- | ----------- | -------------------------------------------------------------------------------------------------------------- |
+| `source` | \`str          | Path\`      | Path to a NeuroQP export ZIP archive or extracted directory.                                                   |
+| `limits` | \`ExportLimits | None\`      | Optional resource limits for archive and metadata reads. Mandatory path and pickle protections remain enabled. |
+
+Returns:
+
+| Type            | Description                         |
+| --------------- | ----------------------------------- |
+| `ProjectExport` | The open, validated project export. |
+
+Raises:
+
+| Type                      | Description                                  |
+| ------------------------- | -------------------------------------------- |
+| `InvalidExportError`      | If the export fails validation.              |
+| `UnsupportedVersionError` | If the export format version is unsupported. |
+
+Notes
+
+Use the returned object as a context manager so its storage is closed promptly. If a trusted ZIP exceeds the configured total uncompressed size, extract it and pass the resulting directory instead; directory exports have no aggregate byte limit.
+
+## validate_export
+
+```
+validate_export(
+    source: str | Path,
+    *,
+    limits: ExportLimits | None = None,
+) -> ValidationReport
+```
+
+Validate a local v2 ZIP archive or extracted directory.
+
+Parameters:
+
+| Name     | Type           | Description | Default                                                                                                        |
+| -------- | -------------- | ----------- | -------------------------------------------------------------------------------------------------------------- |
+| `source` | \`str          | Path\`      | Path to a NeuroQP export ZIP archive or extracted directory.                                                   |
+| `limits` | \`ExportLimits | None\`      | Optional resource limits for archive and metadata reads. Mandatory path and pickle protections remain enabled. |
+
+Returns:
+
+| Type               | Description                                        |
+| ------------------ | -------------------------------------------------- |
+| `ValidationReport` | An aggregate report. A valid export has no issues. |
+
+# Project objects
+
+`open_export()` creates these reader-bound objects. Use their lookup and navigation methods rather than constructing them directly.
+
+## ProjectExport
+
+An open, validated NeuroQP project export.
+
+### member
+
+```
+member(path: str) -> FileArtifact
+```
+
+Get a raw archive member as a file artifact.
+
+### find_stainings
+
+```
+find_stainings(
+    name: str | None = None,
+) -> tuple[Staining, ...]
+```
+
+Find canonical staining names using a case/punctuation-insensitive alias.
+
+## Animal
+
+An animal and its slices.
+
+## Slice
+
+A project slice with navigation to related objects.
+
+### image
+
+```
+image(image_id: str) -> Image
+```
+
+Get this slice's uniquely identified image.
+
+### find_images
+
+```
+find_images(
+    *,
+    staining: Staining | Staining | str | None = None,
+    magnification: str | None = None,
+    filename: str | None = None,
+) -> tuple[Image, ...]
+```
+
+Find images using any combination of common metadata fields.
+
+## Image
+
+An exported image artifact.
+
+### size_bytes
+
+```
+size_bytes: int
+```
+
+Encoded image-file size in bytes.
+
+### open
+
+```
+open() -> BinaryIO
+```
+
+Open the exact archived image member.
+
+### as_path
+
+```
+as_path(
+    *, directory: str | Path | None = None
+) -> AbstractContextManager[Path]
+```
+
+Provide the image as a filesystem path within a context manager.
+
+## Staining
+
+A project staining.
+
+## FileArtifact
+
+A file contained in an open export.
+
+### size_bytes
+
+```
+size_bytes: int
+```
+
+Encoded artifact size in bytes.
+
+This is the stored file size, not the memory required for decoded image pixels.
+
+### open
+
+```
+open() -> BinaryIO
+```
+
+Open the artifact as a binary stream.
+
+Returns:
+
+| Type       | Description                                                             |
+| ---------- | ----------------------------------------------------------------------- |
+| `BinaryIO` | A native file stream for an extracted export or a streaming ZIP member. |
+
+Notes
+
+Close the stream before closing its parent export.
+
+### as_path
+
+```
+as_path(
+    *, directory: str | Path | None = None
+) -> Iterator[Path]
+```
+
+Provide a filesystem path for the artifact.
+
+Parameters:
+
+| Name        | Type  | Description | Default |
+| ----------- | ----- | ----------- | ------- |
+| `directory` | \`str | Path        | None\`  |
+
+Returns:
+
+| Type                           | Description                                                                                               |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `AbstractContextManager[Path]` | A context manager yielding the original path for a directory export or a temporary copy for a ZIP export. |
+
+Notes
+
+Use the path only inside this context and while the parent export is open. Temporary ZIP copies are removed when the context exits.
+
+## Registration
+
+Registration module access.
+
+### for_slice
+
+```
+for_slice(
+    slice_: Slice | Slice | str,
+) -> SliceRegistration | None
+```
+
+Return available registration data for one slice.
+
+## SliceRegistration
+
+Available registration data for one slice.
+
+## ClassificationModule
+
+Provide the classifications and cell matches included in an export.
+
+Attributes:
+
+| Name              | Type | Description                                          |
+| ----------------- | ---- | ---------------------------------------------------- |
+| `classifications` |      | Selected classifications, one per included staining. |
+| `matches`         |      | Included staining-pair cell matches.                 |
+
+### for_staining
+
+```
+for_staining(
+    staining: Staining | Staining | str,
+) -> Classification
+```
+
+Get the selected classification for a staining.
+
+Parameters:
+
+| Name       | Type       | Description | Default |
+| ---------- | ---------- | ----------- | ------- |
+| `staining` | \`Staining | Staining    | str\`   |
+
+Returns:
+
+| Type             | Description                                |
+| ---------------- | ------------------------------------------ |
+| `Classification` | Selected classifier and available results. |
+
+Raises:
+
+| Type                  | Description                                           |
+| --------------------- | ----------------------------------------------------- |
+| `ObjectNotFoundError` | If the export has no classification for the staining. |
+| `AmbiguousNameError`  | If the staining name is not unique.                   |
+
+### match
+
+```
+match(pair_key: str) -> Match
+```
+
+Get a staining-pair match by its exported key.
+
+Parameters:
+
+| Name       | Type  | Description                        | Default    |
+| ---------- | ----- | ---------------------------------- | ---------- |
+| `pair_key` | `str` | Key discovered from :attr:matches. | *required* |
+
+Returns:
+
+| Type    | Description                                 |
+| ------- | ------------------------------------------- |
+| `Match` | Match metadata and available slice results. |
+
+Raises:
+
+| Type                  | Description                     |
+| --------------------- | ------------------------------- |
+| `ObjectNotFoundError` | If the pair key is not present. |
+
+## Classification
+
+Provide classifier metadata and results for one staining.
+
+Attributes:
+
+| Name               | Type | Description                                             |
+| ------------------ | ---- | ------------------------------------------------------- |
+| `staining`         |      | Classified project staining.                            |
+| `classifier`       |      | Selected classifier metadata.                           |
+| `training_summary` |      | Training summary current at export time.                |
+| `training_samples` |      | Exported positive and negative training samples.        |
+| `result_index`     |      | Slice-level result metadata available for lazy loading. |
+| `omitted_slices`   |      | Documented slices without a result.                     |
+
+### find_training_samples
+
+```
+find_training_samples(
+    *,
+    slice: Slice | Slice | str | None = None,
+    label: str | None = None,
+    cell_id: int | None = None,
+) -> tuple[TrainingSample, ...]
+```
+
+Filter exported training samples.
+
+Parameters:
+
+| Name      | Type    | Description | Default                                 |
+| --------- | ------- | ----------- | --------------------------------------- |
+| `slice`   | \`Slice | Slice       | str                                     |
+| `label`   | \`str   | None\`      | Exported label, normally "on" or "off". |
+| `cell_id` | \`int   | None\`      | Cell label to include.                  |
+
+Returns:
+
+| Type                      | Description                             |
+| ------------------------- | --------------------------------------- |
+| `tuple of TrainingSample` | Samples matching every supplied filter. |
+
+### find_omitted_slices
+
+```
+find_omitted_slices(
+    *,
+    slice: Slice | Slice | str | None = None,
+    reason_code: str | None = None,
+) -> tuple[SliceExclusion, ...]
+```
+
+Filter slices that have no classification result.
+
+Parameters:
+
+| Name          | Type    | Description | Default                                 |
+| ------------- | ------- | ----------- | --------------------------------------- |
+| `slice`       | \`Slice | Slice       | str                                     |
+| `reason_code` | \`str   | None\`      | Stable exporter reason code to include. |
+
+Returns:
+
+| Type                      | Description                               |
+| ------------------------- | ----------------------------------------- |
+| `tuple of SliceExclusion` | Omissions matching every supplied filter. |
+
+### result_info
+
+```
+result_info(
+    slice_: Slice | Slice | str,
+) -> ClassificationResultInfo
+```
+
+Get result metadata for one slice without loading arrays.
+
+Parameters:
+
+| Name     | Type    | Description | Default |
+| -------- | ------- | ----------- | ------- |
+| `slice_` | \`Slice | Slice       | str\`   |
+
+Returns:
+
+| Type                       | Description                  |
+| -------------------------- | ---------------------------- |
+| `ClassificationResultInfo` | Slice-level result metadata. |
+
+Raises:
+
+| Type                  | Description                                |
+| --------------------- | ------------------------------------------ |
+| `ObjectNotFoundError` | If the slice has no classification result. |
+
+### load_result
+
+```
+load_result(
+    slice_: Slice | Slice | str,
+) -> ClassificationResult
+```
+
+Load and validate one slice's classification arrays.
+
+Parameters:
+
+| Name     | Type    | Description | Default |
+| -------- | ------- | ----------- | ------- |
+| `slice_` | \`Slice | Slice       | str\`   |
+
+Returns:
+
+| Type                   | Description                                                      |
+| ---------------------- | ---------------------------------------------------------------- |
+| `ClassificationResult` | Aligned cell IDs, centroids, probabilities, and classifications. |
+
+Raises:
+
+| Type                  | Description                                |
+| --------------------- | ------------------------------------------ |
+| `ObjectNotFoundError` | If the slice has no classification result. |
+| `InvalidExportError`  | If the stored arrays fail validation.      |
+| `ClosedExportError`   | If the parent export is closed.            |
+
+### load_results
+
+```
+load_results() -> ClassificationResults
+```
+
+Load and concatenate every available slice result.
+
+Returns:
+
+| Type                    | Description                                             |
+| ----------------------- | ------------------------------------------------------- |
+| `ClassificationResults` | Aligned arrays with a slice ID for every detected cell. |
+
+Raises:
+
+| Type                 | Description                            |
+| -------------------- | -------------------------------------- |
+| `InvalidExportError` | If any stored result fails validation. |
+| `ClosedExportError`  | If the parent export is closed.        |
+
+## Match
+
+Provide cell-match metadata and results for one staining pair.
+
+Attributes:
+
+| Name                     | Type | Description                                                                                                 |
+| ------------------------ | ---- | ----------------------------------------------------------------------------------------------------------- |
+| `pair_key`               |      | Opaque exported key used to retrieve this match.                                                            |
+| `staining_a, staining_b` |      | Stainings in the exported pair definition. Read each result's metadata for its actual NPZ side orientation. |
+| `result_index`           |      | Slice-level match metadata available for lazy loading.                                                      |
+| `omitted_slices`         |      | Documented slices without a match result.                                                                   |
+
+### find_omitted_slices
+
+```
+find_omitted_slices(
+    *,
+    slice: Slice | Slice | str | None = None,
+    reason_code: str | None = None,
+) -> tuple[SliceExclusion, ...]
+```
+
+Filter slices that have no match result.
+
+Parameters:
+
+| Name          | Type    | Description | Default                                 |
+| ------------- | ------- | ----------- | --------------------------------------- |
+| `slice`       | \`Slice | Slice       | str                                     |
+| `reason_code` | \`str   | None\`      | Stable exporter reason code to include. |
+
+Returns:
+
+| Type                      | Description                               |
+| ------------------------- | ----------------------------------------- |
+| `tuple of SliceExclusion` | Omissions matching every supplied filter. |
+
+### result_info
+
+```
+result_info(slice_: Slice | Slice | str) -> MatchResultInfo
+```
+
+Get match metadata for one slice without loading arrays.
+
+Parameters:
+
+| Name     | Type    | Description | Default |
+| -------- | ------- | ----------- | ------- |
+| `slice_` | \`Slice | Slice       | str\`   |
+
+Returns:
+
+| Type              | Description                                            |
+| ----------------- | ------------------------------------------------------ |
+| `MatchResultInfo` | Slice-level match metadata, including side identities. |
+
+Raises:
+
+| Type                  | Description                       |
+| --------------------- | --------------------------------- |
+| `ObjectNotFoundError` | If the slice has no match result. |
+
+### load_result
+
+```
+load_result(slice_: Slice | Slice | str) -> MatchResult
+```
+
+Load and validate one slice's match arrays.
+
+Parameters:
+
+| Name     | Type    | Description | Default |
+| -------- | ------- | ----------- | ------- |
+| `slice_` | \`Slice | Slice       | str\`   |
+
+Returns:
+
+| Type          | Description                          |
+| ------------- | ------------------------------------ |
+| `MatchResult` | Aligned one-to-one cell-pair arrays. |
+
+Raises:
+
+| Type                  | Description                           |
+| --------------------- | ------------------------------------- |
+| `ObjectNotFoundError` | If the slice has no match result.     |
+| `InvalidExportError`  | If the stored arrays fail validation. |
+| `ClosedExportError`   | If the parent export is closed.       |
+
+### load_results
+
+```
+load_results() -> MatchResults
+```
+
+Load and concatenate every available slice match.
+
+Returns:
+
+| Type           | Description                                            |
+| -------------- | ------------------------------------------------------ |
+| `MatchResults` | Aligned arrays with a slice ID for every matched pair. |
+
+Raises:
+
+| Type                 | Description                           |
+| -------------------- | ------------------------------------- |
+| `InvalidExportError` | If any stored match fails validation. |
+| `ClosedExportError`  | If the parent export is closed.       |
+
+# Scientific results
+
+Classification and match loaders return these containers. Their arrays align by row and are documented with shapes, dtypes, units, and side semantics below.
+
+## ClassificationResult
+
+Store aligned classification arrays for one slice.
+
+Attributes:
+
+| Name            | Type                       | Description                                                                                                                                                 |
+| --------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `metadata`      | `ClassificationResultInfo` | Slice, staining, classifier, lineage, and timestamp metadata.                                                                                               |
+| `cell_ids`      | `Array`                    | (N,) int32 labels from the source detection mask.                                                                                                           |
+| `centroids`     | `Array`                    | (N, 2) float32 pixel coordinates in (x, y) order. The origin is the top-left of the source detection image or mask; x increases right and y increases down. |
+| `probabilities` | `Array`                    | (N,) float32 classifier probabilities.                                                                                                                      |
+| `is_positive`   | `Array`                    | (N,) boolean mask. It is the authoritative exported classification and equals probabilities >= threshold.                                                   |
+| `threshold`     | `float`                    | Probability threshold used for this slice.                                                                                                                  |
+
+Notes
+
+Every row index refers to the same detected cell across all arrays. Coordinates are image pixels, not micrometres or atlas coordinates.
+
+### positive_centroids
+
+```
+positive_centroids: Array
+```
+
+Return `centroids` rows classified as positive.
+
+## ClassificationResults
+
+Store aligned classification arrays concatenated across slices.
+
+Attributes:
+
+| Name            | Type                                          | Description                                                         |
+| --------------- | --------------------------------------------- | ------------------------------------------------------------------- |
+| `cell_ids`      | `Array`                                       | (N,) int32 cell labels. Labels are unique only within a slice.      |
+| `slice_ids`     | `Array`                                       | (N,) slice identifiers aligned with every other array.              |
+| `centroids`     | `Array`                                       | (N, 2) float32 source-image pixel coordinates in (x, y) order.      |
+| `probabilities` | `Array`                                       | (N,) float32 classifier probabilities.                              |
+| `is_positive`   | `Array`                                       | (N,) authoritative boolean classification mask.                     |
+| `by_slice`      | `MappingProxyType[str, ClassificationResult]` | Read-only mapping from slice ID to its :class:ClassificationResult. |
+
+Notes
+
+Use `(slice_id, cell_id)` as a cell key. Thresholds can differ by slice and remain available through :attr:`by_slice`.
+
+### positive_centroids
+
+```
+positive_centroids: Array
+```
+
+Return `centroids` rows classified as positive.
+
+## MatchResult
+
+Store aligned one-to-one cell matches for one slice.
+
+Attributes:
+
+| Name                                     | Type              | Description                                                                              |
+| ---------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------- |
+| `metadata`                               | `MatchResultInfo` | Slice metadata and the actual staining and detection run assigned to each side.          |
+| `cell_ids_a, cell_ids_b`                 |                   | (M,) int32 cell labels for sides A and B.                                                |
+| `centroids_a, centroids_b`               |                   | (M, 2) float32 source-mask pixel coordinates in (x, y) order for the corresponding side. |
+| `intersection_area`                      | `Array`           | (M,) int32 overlap area in pixels.                                                       |
+| `area_a, area_b`                         |                   | (M,) int32 cell-mask areas in pixels for each side.                                      |
+| `overlap_fraction_a, overlap_fraction_b` |                   | Intersection area divided by the corresponding side's area.                              |
+| `overlap_fraction_min`                   | `Array`           | Smaller of the two side-specific overlap fractions.                                      |
+| `iou`                                    | `Array`           | Intersection over union: intersection / (area_a + area_b - intersection).                |
+| `algorithm_version`                      | `str`             | Matching algorithm version.                                                              |
+| `overlap_threshold`                      | `float`           | Minimum overlap_fraction_min retained by the matching algorithm.                         |
+
+Notes
+
+Every row index describes one matched pair. Read side identities from `metadata.side_a` and `metadata.side_b`; do not infer them from the pair key.
+
+## MatchResults
+
+Store aligned cell-match arrays concatenated across slices.
+
+Attributes:
+
+| Name                                     | Type                                 | Description                                                                      |
+| ---------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------- |
+| `slice_ids`                              | `Array`                              | (M,) slice identifiers aligned with every other array.                           |
+| `cell_ids_a, cell_ids_b`                 |                                      | (M,) int32 cell labels for sides A and B. Labels are unique only within a slice. |
+| `centroids_a, centroids_b`               |                                      | (M, 2) float32 source-mask pixel coordinates in (x, y) order.                    |
+| `intersection_area, area_a, area_b`      |                                      | (M,) pixel-area arrays.                                                          |
+| `overlap_fraction_a, overlap_fraction_b` |                                      | (M,) side-specific intersection fractions.                                       |
+| `overlap_fraction_min`                   | `Array`                              | (M,) smaller side-specific overlap fraction.                                     |
+| `iou`                                    | `Array`                              | (M,) intersection-over-union values.                                             |
+| `by_slice`                               | `MappingProxyType[str, MatchResult]` | Read-only mapping from slice ID to its :class:MatchResult.                       |
+
+Notes
+
+Use `(slice_id, cell_id)` to identify cells. Side identities and thresholds remain available through :attr:`by_slice`.
+
+# Metadata models
+
+These immutable records are returned by project objects and result loaders. Analysis code normally reads their attributes rather than constructing them directly. Python field names use `snake_case`; the [export specification](https://python.neuroqp.com/0.1/specifications/export-v2/index.md) documents the original JSON field names.
+
+## Project and registration
+
+## Manifest
+
+Describe the identity and included content of a v2 export.
+
+Attributes:
+
+| Name                                       | Type                 | Description                                                  |
+| ------------------------------------------ | -------------------- | ------------------------------------------------------------ |
+| `export_version`                           | `Literal['v2']`      | Export format version. It is "v2" for this model.            |
+| `export_id`                                | `str`                | Opaque identifier for this export snapshot.                  |
+| `exported_at`                              | `NormalizedDatetime` | Snapshot creation time as a timezone-aware UTC datetime.     |
+| `project`                                  | `ManifestProject`    | Project identifier, slug, and name recorded by the exporter. |
+| `project_metadata_path`                    | `str`                | Archive path to the export metadata record.                  |
+| `included_modules`                         | `tuple[Module, ...]` | Modules actually included in the export.                     |
+| `atlas`                                    | \`AtlasSummary       | None\`                                                       |
+| `selected_classifier_head_ids_by_staining` | `dict[str, str]`     | Mapping from staining IDs to selected classifier IDs.        |
+| `linked_training_run_ids_by_staining`      | \`dict\[str, str     | None\]\`                                                     |
+
+## ExportMetadata
+
+Describe how and when an export snapshot was requested.
+
+Attributes:
+
+| Name                                       | Type                 | Description                                              |
+| ------------------------------------------ | -------------------- | -------------------------------------------------------- |
+| `export_version`                           | `Literal['v2']`      | Export format version.                                   |
+| `exported_at`                              | `NormalizedDatetime` | Snapshot creation time as a timezone-aware UTC datetime. |
+| `export_id`                                | `str`                | Opaque identifier matching :attr:Manifest.export_id.     |
+| `project_id`                               | `str`                | Opaque project identifier.                               |
+| `expires_at`                               | `NormalizedDatetime` | Expiry time of the source export request.                |
+| `requested_modules`                        | `tuple[Module, ...]` | Modules requested when the export was created.           |
+| `selected_classifier_head_ids_by_staining` | `dict[str, str]`     | Mapping from staining IDs to selected classifier IDs.    |
+
+## ProjectMetadata
+
+Describe the project's image scales and annotations.
+
+Attributes:
+
+| Name                            | Type    | Description                                            |
+| ------------------------------- | ------- | ------------------------------------------------------ |
+| `name`                          | `str`   | Human-readable project name.                           |
+| `type`                          | `str`   | Project imaging type recorded by NeuroQP.              |
+| `atlas_id`                      | \`str   | None\`                                                 |
+| `whole_slice_label`             | `str`   | Display label for whole-slice images.                  |
+| `whole_slice_microns_per_pixel` | `float` | Whole-slice image pixel size in micrometres per pixel. |
+| `detail_image_label`            | `str`   | Display label for detail images.                       |
+| `detail_microns_per_pixel`      | `float` | Detail-image pixel size in micrometres per pixel.      |
+| `comments`                      | \`str   | None\`                                                 |
+
+## Atlas
+
+Describe the atlas selected for the exported project.
+
+Attributes:
+
+| Name            | Type             | Description                                       |
+| --------------- | ---------------- | ------------------------------------------------- |
+| `id`            | `str`            | Opaque atlas identifier.                          |
+| `key`           | `str`            | Stable atlas family key.                          |
+| `version`       | `str`            | Atlas data version.                               |
+| `name`          | `str`            | Human-readable atlas name.                        |
+| `species`       | `str`            | Species described by the atlas.                   |
+| `plane`         | `str`            | Sectioning plane, such as "coronal".              |
+| `specification` | `dict[str, Any]` | Additive atlas specification supplied by NeuroQP. |
+
+## AtlasRegistration
+
+Describe the atlas landmarks for one slice.
+
+Attributes:
+
+| Name                  | Type                               | Description                                              |
+| --------------------- | ---------------------------------- | -------------------------------------------------------- |
+| `slice_id`            | `str`                              | Identifier of the registered slice.                      |
+| `slice_coordinate_mm` | `float`                            | Registered anterior-posterior coordinate in millimetres. |
+| `landmarks`           | `tuple[RegistrationLandmark, ...]` | Corresponding image-pixel and atlas-plane points.        |
+
+## BrainRegion
+
+Identify an atlas brain region selected in the project.
+
+Attributes:
+
+| Name           | Type  | Description                                         |
+| -------------- | ----- | --------------------------------------------------- |
+| `structure_id` | `int` | Numeric structure identifier assigned by the atlas. |
+| `name`         | `str` | Full region name.                                   |
+| `acronym`      | `str` | Atlas region acronym.                               |
+
+## DetailTransform
+
+Describe a detail image's footprint in whole-slice pixel coordinates.
+
+Attributes:
+
+| Name       | Type                | Description                                                          |
+| ---------- | ------------------- | -------------------------------------------------------------------- |
+| `slice_id` | `str`               | Identifier of the transformed slice.                                 |
+| `corners`  | `tuple[Point, ...]` | Ordered detail-image corners expressed as whole-slice (x, y) pixels. |
+
+## Classification and matching
+
+## ClassifierMetadata
+
+Describe the classifier selected for one staining.
+
+Attributes:
+
+| Name                 | Type                                                      | Description                                                     |
+| -------------------- | --------------------------------------------------------- | --------------------------------------------------------------- |
+| `id`                 | `str`                                                     | Opaque classifier-head identifier.                              |
+| `display_name`       | `str`                                                     | Human-readable classifier name.                                 |
+| `version`            | `int`                                                     | Numeric classifier version.                                     |
+| `head_type`          | `str`                                                     | Classifier-head type recorded by NeuroQP.                       |
+| `source`             | `Literal['trained', 'platform_import', 'project_import']` | Whether the classifier was trained in this project or imported. |
+| `created_at`         | `NormalizedDatetime`                                      | Creation time as a timezone-aware UTC datetime.                 |
+| `comments`           | \`str                                                     | None\`                                                          |
+| `staining`           | `EntityReference`                                         | Staining identity associated with the classifier.               |
+| `training_run_id`    | \`str                                                     | None\`                                                          |
+| `evaluation_metrics` | `dict[str, Any]`                                          | Additive evaluation metrics recorded for the classifier.        |
+
+## TrainingSummary
+
+Summarize classifier training data for one staining.
+
+Attributes:
+
+| Name              | Type                           | Description                                                            |
+| ----------------- | ------------------------------ | ---------------------------------------------------------------------- |
+| `staining`        | `EntityReference`              | Staining identity associated with the training data.                   |
+| `sample_basis`    | `Literal['current_at_export']` | Basis of the sample counts; v2 records samples current at export time. |
+| `current_samples` | `SampleCounts`                 | Positive, negative, total, and slice counts at export time.            |
+| `training_run`    | \`TrainingRun                  | None\`                                                                 |
+
+## TrainingSample
+
+Describe one positive or negative classifier training example.
+
+Attributes:
+
+| Name                         | Type                   | Description                                               |
+| ---------------------------- | ---------------------- | --------------------------------------------------------- |
+| `slice_id, slice_name`       |                        | Identifier and optional display name of the source slice. |
+| `staining_id, staining_name` |                        | Identifier and display name of the classified staining.   |
+| `cell_id`                    | \`int                  | None\`                                                    |
+| `cell_detection_run_id`      | \`str                  | None\`                                                    |
+| `label`                      | `Literal['on', 'off']` | Exported training label, "on" or "off".                   |
+| `created_at`                 | `NormalizedDatetime`   | Sample creation time as a timezone-aware UTC datetime.    |
+
+## ClassificationResultInfo
+
+Describe one slice-level classification result before arrays are loaded.
+
+Attributes:
+
+| Name                   | Type                 | Description                                                   |
+| ---------------------- | -------------------- | ------------------------------------------------------------- |
+| `slice_id, slice_name` |                      | Identifier and optional display name of the classified slice. |
+| `staining_id`          | `str`                | Identifier of the classified staining.                        |
+| `classifier_id`        | `str`                | Identifier of the classifier used for this result.            |
+| `source`               | `DetectionSource`    | Detection lineage that produced the classified cells.         |
+| `on_count, off_count`  |                      | Exported positive and negative counts, or None.               |
+| `threshold`            | \`float              | None\`                                                        |
+| `timestamp`            | `NormalizedDatetime` | Result time as a timezone-aware UTC datetime.                 |
+| `npz_path`             | `str`                | Archive path to the result arrays.                            |
+
+## MatchResultInfo
+
+Describe one slice-level cell-match result before arrays are loaded.
+
+Attributes:
+
+| Name                   | Type                 | Description                                                            |
+| ---------------------- | -------------------- | ---------------------------------------------------------------------- |
+| `slice_id, slice_name` |                      | Identifier and optional display name of the matched slice.             |
+| `side_a, side_b`       |                      | Actual staining, detection-run, and unmatched count for each NPZ side. |
+| `algorithm_version`    | `str`                | Matching algorithm version.                                            |
+| `overlap_threshold`    | `float`              | Minimum overlap fraction used to retain candidate pairs.               |
+| `timestamp`            | `NormalizedDatetime` | Result time as a timezone-aware UTC datetime.                          |
+| `candidate_pair_count` | \`int                | None\`                                                                 |
+| `matched_count`        | \`int                | None\`                                                                 |
+| `npz_path`             | `str`                | Archive path to the match arrays.                                      |
+
+## SliceExclusion
+
+Explain why one slice has no classification or match result.
+
+Attributes:
+
+| Name          | Type  | Description                                          |
+| ------------- | ----- | ---------------------------------------------------- |
+| `slice_id`    | `str` | Identifier of the omitted slice.                     |
+| `slice_name`  | \`str | None\`                                               |
+| `reason_code` | `str` | Stable machine-readable omission category.           |
+| `reason`      | `str` | Human-readable explanation recorded by the exporter. |
+
+## SharedDetectionSource
+
+Identify classification based on a shared cell-count detection.
+
+Attributes:
+
+| Name            | Type                          | Description                                 |
+| --------------- | ----------------------------- | ------------------------------------------- |
+| `kind`          | `Literal['shared_detection']` | Always "shared_detection".                  |
+| `cell_count_id` | `str`                         | Identifier of the shared cell-count result. |
+
+## IndependentDetectionSource
+
+Identify classification based on a staining-specific detection.
+
+Attributes:
+
+| Name                    | Type                               | Description                                        |
+| ----------------------- | ---------------------------------- | -------------------------------------------------- |
+| `kind`                  | `Literal['independent_detection']` | Always "independent_detection".                    |
+| `cell_detection_run_id` | `str`                              | Identifier of the staining-specific detection run. |
+
+## Validation and limits
+
+## ExportLimits
+
+Configure resource limits for reading untrusted exports.
+
+Attributes:
+
+| Name                           | Type    | Description                                                                                                |
+| ------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------- |
+| `max_members`                  | `int`   | Maximum number of archive members.                                                                         |
+| `max_total_uncompressed_bytes` | `int`   | Maximum declared total uncompressed ZIP size in bytes. Extracted directories have no aggregate byte limit. |
+| `max_metadata_bytes`           | `int`   | Maximum size of one JSON or JSONL metadata member in bytes.                                                |
+| `max_compression_ratio`        | `float` | Maximum declared compression ratio of one ZIP member. This does not apply to extracted directories.        |
+
+Notes
+
+Path-safety and NumPy pickle protections remain mandatory.
+
+## ValidationReport
+
+Collect all independently detectable metadata validation issues.
+
+Attributes:
+
+| Name     | Type                          | Description                                                  |
+| -------- | ----------------------------- | ------------------------------------------------------------ |
+| `issues` | `tuple[ValidationIssue, ...]` | Validation issues. An empty tuple means the export is valid. |
+| `valid`  | `bool`                        | True when :attr:issues is empty.                             |
+
+### valid
+
+```
+valid: bool
+```
+
+Whether the export passed validation.
+
+## ValidationIssue
+
+Describe one actionable problem found in an export.
+
+Attributes:
+
+| Name      | Type  | Description                                            |
+| --------- | ----- | ------------------------------------------------------ |
+| `path`    | `str` | Root-relative member path associated with the problem. |
+| `code`    | `str` | Stable machine-readable issue code.                    |
+| `message` | `str` | Human-readable explanation.                            |
+| `field`   | \`str | None\`                                                 |
+
+# Exceptions
+
+## NeuroQPError
+
+Base class for SDK errors.
+
+## InvalidExportError
+
+Raised when export metadata fails validation.
+
+## UnsupportedVersionError
+
+Raised when the export wire version is unsupported.
+
+## ObjectNotFoundError
+
+Raised when a singular object lookup has no result.
+
+## AmbiguousNameError
+
+Raised when a singular name lookup has several results.
+
+## ClosedExportError
+
+Raised when a closed export is accessed.
+# Export specifications
+
+# Current export specification
+
+[NeuroQP project export v2](https://python.neuroqp.com/0.1/specifications/export-v2/index.md) is the newest and only currently supported wire format.
+
+Every supported format will remain listed in this documentation. Historical released documentation snapshots are immutable and are selected with the version switcher.
+
+# NeuroQP project export v2
+
+Status: normative. Wire version: `v2`. Source of truth: the live NeuroQP exporter
+
+This document defines the archive produced by the NeuroQP exporter and accepted by the Python SDK. It was derived from `apps/web/convex/projectExportWorker.ts`, `algorithms/project_export_worker/handler.py`, the classification result producers, and a post-fix v2 export generated on 28 July 2026. If the exporter and this document disagree, fix this document and the SDK together from the exporter behavior.
+
+## Compatibility policy
+
+NeuroQP owns wire-format versions. A new format is introduced in NeuroQP first. The SDK then adds a private adapter, a synthetic fixture, contract tests, and a new versioned specification before a package release advertises support.
+
+- The newest supported format is the default.
+- Every previously supported format and specification remains available.
+- Public SDK models are stable and normalized; wire models and adapters are private.
+- Unknown additive JSON fields are preserved and do not make an otherwise valid export invalid.
+- Removing support for a published format is exceptional and requires a major SDK version.
+- Published documentation snapshots are immutable.
+
+The v2 SDK accepts only the canonical image layout described below. The temporary pre-fix layout without both `imageId` and `archivePath` is not v2.
+
+## Container and paths
+
+An export is either the ZIP file produced by NeuroQP or an extracted directory with the same member paths. ZIP member names use `/` separators and are relative to the archive root. Members must not be absolute, contain `.` or `..` path segments, use backslashes, repeat another member name, or be symbolic links. Directory inputs must not resolve through a link outside their root.
+
+All JSON is UTF-8. Generated JSON is pretty-printed, but whitespace and object key order are not significant. JSON Lines files contain one UTF-8 JSON object per non-empty line. Binary source objects retain their original bytes.
+
+## Archive tree
+
+```
+manifest.json
+project/
+  export.json
+  project.json
+  stainings.json
+  animals.json
+  slices.json
+  brain-regions.json
+data/                                                   # data module
+  slices/{sliceId}/
+    slice.json
+    images.json
+    images/{imageId}__{sanitizedOriginalFilename}
+    detection/cell-mask.tif                             # optional per slice
+registration/                                           # registration module
+  atlas/atlas-manifest.json                             # when an atlas exists
+  slices/{sliceId}/
+    atlas-registration.json                             # optional per slice
+    detail-to-whole-slice.json                          # optional per slice
+classification/                                         # classification module
+  manifest.json
+  stainings/{stainingId}/
+    classifier.json
+    training/summary.json
+    training/samples.jsonl
+    results/index.json
+    results/slices/{sliceId}.npz
+  matches/{pairKey}/
+    match.json
+    slices/{sliceId}.npz
+```
+
+`manifest.json` and every `project/*.json` member are always present. Module directories exist only when their module is listed in `includedModules`. Individual registration, mask, classification result, and match members are conditional on the corresponding source artifact being available.
+
+The ZIP contains generated metadata and copied source objects. It is not a database backup. Image members are the processed image artifacts referenced by the export snapshot; the original filename and extension are retained in the member name after sanitizing `/` and `\` to `_`. Classifier model weights and other secret model artifacts are not exported.
+
+## Common metadata
+
+### `manifest.json`
+
+| Field                                 | Type            | Meaning                                                     |
+| ------------------------------------- | --------------- | ----------------------------------------------------------- |
+| `exportVersion`                       | string          | Required; exactly `"v2"`.                                   |
+| `exportId`                            | string          | Export database identifier.                                 |
+| `exportedAt`                          | ISO 8601 string | UTC export creation time.                                   |
+| `project`                             | object          | `{id, slug, name}` strings.                                 |
+| `projectMetadataPath`                 | string          | Exactly `project/export.json`.                              |
+| `includedModules`                     | string[]        | Ordered subset of `data`, `registration`, `classification`. |
+| `atlas`                               | object or null  | `{id, key, version, name}` when configured.                 |
+| `selectedClassifierHeadIdsByStaining` | object          | Staining ID to selected classifier-head ID.                 |
+| `linkedTrainingRunIdsByStaining`      | object          | Staining ID to training-run ID or null.                     |
+
+### `project/export.json`
+
+| Field                                 | Type            | Meaning                                    |
+| ------------------------------------- | --------------- | ------------------------------------------ |
+| `exportVersion`                       | string          | Exactly `"v2"`.                            |
+| `exportedAt`                          | ISO 8601 string | UTC export creation time.                  |
+| `exportId`                            | string          | Same value as the root manifest.           |
+| `projectId`                           | string          | Same value as `manifest.project.id`.       |
+| `expiresAt`                           | integer         | Source export expiry as Unix milliseconds. |
+| `requestedModules`                    | string[]        | Same module set as `includedModules`.      |
+| `selectedClassifierHeadIdsByStaining` | object          | Same selection map as the root manifest.   |
+
+### `project/project.json`
+
+| Field                       | Type   | Nullable | Meaning                                |
+| --------------------------- | ------ | -------- | -------------------------------------- |
+| `name`                      | string | no       | Project name.                          |
+| `type`                      | string | no       | Imaging/project type.                  |
+| `atlasId`                   | string | yes      | Configured atlas database ID.          |
+| `wholeSliceLabel`           | string | no       | Human label for the whole-slice image. |
+| `wholeSliceMicronsPerPixel` | number | no       | Whole-slice pixel size.                |
+| `detailImageLabel`          | string | no       | Human label for detail images.         |
+| `detailMicronsPerPixel`     | number | no       | Detail-image pixel size.               |
+| `comments`                  | string | yes      | Project comments.                      |
+
+### Project collections
+
+`project/stainings.json` is an array of:
+
+| Field  | Type   | Meaning                  |
+| ------ | ------ | ------------------------ |
+| `_id`  | string | Staining database ID.    |
+| `name` | string | Canonical staining name. |
+
+`project/animals.json` is an array of:
+
+| Field       | Type   | Nullable | Meaning                                     |
+| ----------- | ------ | -------- | ------------------------------------------- |
+| `_id`       | string | no       | Animal database ID.                         |
+| `name`      | string | no       | Animal name.                                |
+| `comments`  | string | yes      | Comments.                                   |
+| `sex`       | string | yes      | Stored sex value.                           |
+| `group`     | string | yes      | Resolved group name, not a database ID.     |
+| `condition` | string | yes      | Resolved condition name, not a database ID. |
+
+`project/slices.json` is an array of:
+
+| Field      | Type   | Meaning                                       |
+| ---------- | ------ | --------------------------------------------- |
+| `_id`      | string | Slice database ID.                            |
+| `animalId` | string | Parent animal database ID.                    |
+| `apMm`     | number | Anterior-posterior coordinate in millimetres. |
+
+`project/brain-regions.json` is an array of:
+
+| Field         | Type    | Meaning             |
+| ------------- | ------- | ------------------- |
+| `structureId` | integer | Atlas structure ID. |
+| `name`        | string  | Region name.        |
+| `acronym`     | string  | Region acronym.     |
+
+IDs are opaque strings. Consumers must not infer meaning from their shape.
+
+## Data module
+
+For every project slice, `data/slices/{sliceId}/slice.json` contains `_id`, `animalId`, `apMm`, and nullable `name`. Its first three values match the corresponding entry in `project/slices.json`.
+
+`data/slices/{sliceId}/images.json` is an array of:
+
+| Field              | Type    | Meaning                                                     |
+| ------------------ | ------- | ----------------------------------------------------------- |
+| `imageId`          | string  | Image database ID; required in canonical v2.                |
+| `archivePath`      | string  | Exact root-relative image member; required in canonical v2. |
+| `height`           | integer | Image height in pixels.                                     |
+| `width`            | integer | Image width in pixels.                                      |
+| `stainingId`       | string  | Referenced staining ID.                                     |
+| `sliceId`          | string  | Parent slice ID.                                            |
+| `magnification`    | string  | Stored magnification label.                                 |
+| `originalFilename` | string  | Original uploaded filename.                                 |
+
+`archivePath` is exactly `data/slices/{sliceId}/images/{imageId}__{sanitizedOriginalFilename}` and must name an archive member. `sliceId` must match the containing directory and `stainingId` must exist in `project/stainings.json`. Image IDs and archive paths are unique within the export.
+
+`detection/cell-mask.tif` is present only when the slice has a cell-count mask. It is copied without decoding or transformation.
+
+## Registration module
+
+`registration/atlas/atlas-manifest.json` repeats `id`, `key`, `version`, and `name`, and adds `species`, `plane`, and the complete additive atlas `spec` object. The current atlas specification includes raster dimensions and pixel size, AP origin/spacing, coordinate metadata, physical/raster transforms, asset paths, species, organ, plane, slice count, and leaf-region count. The outer atlas identity must agree with the root manifest.
+
+`atlas-registration.json` contains:
+
+| Field      | Type     | Meaning                                                                 |
+| ---------- | -------- | ----------------------------------------------------------------------- |
+| `slideId`  | string   | Slice ID matching its directory.                                        |
+| `apMm`     | number   | Registered AP coordinate in millimetres.                                |
+| `pointsV2` | object[] | Landmarks with `imageXPx`, `imageYPx`, `atlasPlaneXMm`, `atlasPlaneYMm` |
+
+`detail-to-whole-slice.json` contains `slideId` plus `corners`, an ordered array of `{x, y}` pixel coordinates. Registration and alignment files are independent and either may be absent for a slice.
+
+## Classification module
+
+### Manifest and classifier metadata
+
+`classification/manifest.json` has `exportVersion: "v2"`, `stainings`, and `matches`. Each staining entry contains:
+
+- `staining: {id, name}` and `classifier: {id, displayName}`;
+- `classifierPath`, `trainingSummaryPath`, `trainingSamplesPath`, and `resultIndexPath`, each naming an existing member;
+- `exclusions`, an array of `{sliceId, sliceName, reasonCode, reason}`.
+
+Each match entry contains `pairKey`, `stainingA`, `stainingB`, `matchPath`, and the same exclusion shape.
+
+`classifier.json` contains classifier `id`, `displayName`, numeric `version`, `headType`, `source` (`trained`, `platform_import`, or `project_import`), numeric-millisecond `createdAt`, nullable `comments`, `{id, name}` `staining`, nullable `trainingRunId`, and additive `evaluationMetrics`. It deliberately does not contain model weights, model URLs, recipe hashes, or secret metadata.
+
+### Training data
+
+`training/summary.json` contains `{id, name}` `staining`, `sampleBasis: "current_at_export"`, `currentSamples` (`on`, `off`, `total`, `sliceCount`), and nullable `trainingRun`. A training run may contain:
+
+- `id`, `status`, `trainingDurationMs`;
+- `finalMetrics` (`accuracy`, `precision`, `recall`, `f1`, `trainLoss`, `valLoss`, `sampleCount`);
+- `recordedSampleCounts`;
+- numeric-array `histories`;
+- `coverage`, `confidence`, and `convergence` metric objects.
+
+Every `training/samples.jsonl` row contains `sliceId`, nullable `sliceName`, `stainingId`, `stainingName`, nullable numeric `cellId`, optional `cellDetectionRunId`, `label` (`on` or `off`), and numeric-millisecond `createdAt`. The file may be empty.
+
+### Classification result index and NPZ
+
+`results/index.json` contains `staining`, `classifier`, and a `slices` array. Each slice entry contains:
+
+- `sliceId`, `sliceName`, `stainingId`, and `classifierId`;
+- `sourceLineage`, either `{kind: "shared_detection", cellCountId}` or `{kind: "independent_detection", cellDetectionRunId}`;
+- nullable `onCount`, `offCount`, and `threshold`;
+- numeric-millisecond `timestamp`;
+- `npzPath`, which exactly names the slice result member.
+
+Classification NPZ members use these arrays:
+
+| Array         | Shape  | Dtype                    | Meaning                                     |
+| ------------- | ------ | ------------------------ | ------------------------------------------- |
+| `cell_ids`    | `(N,)` | `int32`                  | Cell label IDs.                             |
+| `centroids_x` | `(N,)` | `float32`                | X pixel coordinates.                        |
+| `centroids_y` | `(N,)` | `float32`                | Y pixel coordinates.                        |
+| `intensities` | `(N,)` | `float32`                | Classifier probabilities.                   |
+| `is_on`       | `(N,)` | `uint8`                  | Authoritative positive mask, values 0 or 1. |
+| `threshold`   | `(1,)` | `float32`                | Classification threshold.                   |
+| `staining`    | `(1,)` | legacy object or Unicode | Redundant staining name.                    |
+
+All length-`N` arrays align by index. Required numeric arrays must be loadable with `numpy.load(..., allow_pickle=False)`. Some existing v2 files contain a legacy object-dtype `staining` array; consumers must tolerate the member but must never access it. Staining identity comes from JSON. New producers should write Unicode. `onCount + offCount == N`; when counts and threshold are present, `is_on` agrees with `intensities >= threshold`.
+
+### Match index and NPZ
+
+`matches/{pairKey}/match.json` contains `pairKey`, `stainingA`, `stainingB`, `exclusions`, and `slices`. A slice entry contains `sliceId`, `sliceName`, `sideA` and `sideB` staining/detection identities and nullable unmatched counts, `algorithmVersion`, `overlapThreshold`, numeric-millisecond `timestamp`, nullable `candidatePairCount` and `matchedCount`, and `npzPath`. The side order records the actual NPZ orientation and may differ from the lexical staining order.
+
+Match NPZ members use scalar `schema_version` (`int32`), `algorithm_version` (Unicode), and `overlap_threshold` (`float32`), plus aligned `(M,)` arrays:
+
+- `cell_ids_a`, `cell_ids_b`, `intersection_area`, `area_a`, and `area_b` (`int32`);
+- `overlap_fraction_a`, `overlap_fraction_b`, `overlap_fraction_min`, and `iou` (`float32`);
+- when `M > 0`, `centroids_x_a`, `centroids_y_a`, `centroids_x_b`, and `centroids_y_b` (`float32`).
+
+Each cell ID occurs at most once per side. Fractions and IoU are in `[0, 1]`; `overlap_fraction_min` is at least the indexed overlap threshold.
+
+## Required invariants
+
+A conforming reader validates at least:
+
+1. the safe container/path rules and configured resource limits;
+1. all common members and supported `exportVersion`;
+1. parseable UTF-8 JSON with the required field types;
+1. agreement of export IDs, project IDs, versions, module sets, and selection maps between common metadata files;
+1. unique IDs where they are keys and valid animal, staining, slice, atlas, classifier, and member-path references;
+1. canonical `imageId`/`archivePath` pairs and exact image-member existence;
+1. module manifests and indexed member paths when a module is included;
+1. NPZ safety, dtype, shape, alignment, counts, and threshold invariants when binary results are loaded.
+
+Validation issues have a member `path`, optional field or array name, stable machine-readable `code`, and human-readable `message`. Readers should aggregate independent metadata issues rather than stop at the first malformed field.
+
+## Security and limits
+
+Exports are untrusted input. Readers must never extract a ZIP to inspect it and must always use `allow_pickle=False`. They reject path traversal, absolute or duplicate members, backslash aliases, links, corrupt containers, unsafe required object arrays, and resource-limit violations.
+
+Default SDK limits are 10,000 members, 4 GiB total declared uncompressed ZIP size, 8 MiB per JSON/JSONL member, and a 1,000:1 per-member compression ratio. Callers may provide a documented `ExportLimits` override; there is no switch that disables all safety checks.
+
+## Minimal example
+
+```
+{
+  "exportVersion": "v2",
+  "exportId": "export-1",
+  "exportedAt": "2026-07-28T12:00:00Z",
+  "project": {"id": "project-1", "slug": "demo", "name": "Demo"},
+  "projectMetadataPath": "project/export.json",
+  "includedModules": ["data"],
+  "atlas": null,
+  "selectedClassifierHeadIdsByStaining": {},
+  "linkedTrainingRunIdsByStaining": {}
+}
+```
+
+The corresponding data image record is canonical only when it includes both:
+
+```
+{
+  "imageId": "image-1",
+  "archivePath": "data/slices/slice-1/images/image-1__demo.tif"
+}
+```
+# Project information
+
+# Changelog
+
+All notable changes to NeuroQP Python are recorded here.
+
+## 0.1.0 — Unreleased
+
+- Add safe reading and aggregate validation for NeuroQP v2 ZIP archives and extracted directories.
+- Add typed navigation for projects, animals, slices, stainings, images, registration, classifications, and matches.
+- Add lazy, pickle-disabled NumPy loading with scientific invariant checks.
+- Add human-readable and JSON `validate` and `inspect` CLI commands.
+- Add compact text and notebook representations for reader-bound objects and result containers.
+- Add streaming artifacts, temporary path access, and large strip-based TIFF workflows.
+- Add strict generated documentation, executable examples, and release automation.
+
+# Support
+
+## Questions
+
+Use [GitHub Discussions](https://github.com/neuroqp/neuroqp-python/discussions) for usage questions and ideas that are not yet concrete feature requests.
+
+## Bugs and feature requests
+
+Use the repository’s structured [issue forms](https://github.com/neuroqp/neuroqp-python/issues/new/choose). Include the SDK version, Python version, operating system, command or minimal code, and full error text.
+
+Do not attach private project exports. Create a minimal synthetic reproducer or share only redacted validation output.
+
+## Security reports
+
+Do not open a public issue for a vulnerability. Follow the private reporting process in the [security policy](https://github.com/neuroqp/neuroqp-python/security/policy).
+
+## Supported versions
+
+Security fixes target the latest package minor and its supported export formats.

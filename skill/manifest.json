@@ -1,0 +1,13 @@
+{
+  "changelogUrl": "https://python.neuroqp.com/latest/changelog/",
+  "latestPackageVersion": "0.1.0.dev0",
+  "packageUrl": "https://pypi.org/project/neuroqp/",
+  "schemaVersion": 1,
+  "skills": {
+    "0.1": {
+      "sha256": "a7d8a1795e53217f65dce443cb9f6591059beb97169352310742408b9ef36a8b",
+      "url": "https://python.neuroqp.com/skill/neuroqp-python-0.1.0.zip",
+      "version": "0.1.0"
+    }
+  }
+}

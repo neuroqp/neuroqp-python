@@ -1,0 +1,57 @@
+# NeuroQP Python
+
+> Python SDK and CLI for NeuroQP project exports
+
+Use these pages to write Python analyses for NeuroQP project exports.
+Start with the quickstart, then use the guides, API reference, and export
+specification as needed. The complete documentation is available in
+[llms-full.txt](llms-full.txt).
+
+
+## Overview
+
+- [Overview](https://python.neuroqp.com/0.1/index.md): What NeuroQP Python offers for export-based neuroscience analysis.
+
+## Getting started
+
+- [Installation](https://python.neuroqp.com/0.1/getting-started/installation/index.md): Install NeuroQP Python for an analysis environment.
+- [AI coding agents](https://python.neuroqp.com/0.1/getting-started/ai-coding-agents/index.md): Use the installable skill or online AI-readable documentation with Codex, Claude Code, and other coding agents.
+- [Quickstart](https://python.neuroqp.com/0.1/getting-started/quickstart/index.md): Open an export and begin navigating project data.
+
+## Example notebooks
+
+- [Examples](https://python.neuroqp.com/0.1/examples/index.md): Choose and download an executable example notebook.
+- [Open and navigate an export](https://python.neuroqp.com/0.1/examples/open-and-navigate/index.md): Open an export and navigate its project objects.
+- [Validate an export](https://python.neuroqp.com/0.1/examples/validate-export/index.md): Validate an export before starting an analysis.
+
+## Concepts
+
+- [Project exports](https://python.neuroqp.com/0.1/concepts/exports/index.md): Understand export containers, files, limits, and access patterns.
+- [Object model](https://python.neuroqp.com/0.1/concepts/object-model/index.md): Understand project objects and their lifecycle.
+
+## Guides
+
+- [Navigate a project](https://python.neuroqp.com/0.1/guides/navigation/index.md): Find animals, slices, stainings, images, and registrations.
+- [Images and masks](https://python.neuroqp.com/0.1/guides/images/index.md): Inspect and process small or very large exported images.
+- [Validate and inspect](https://python.neuroqp.com/0.1/guides/validation-cli/index.md): Validate and inspect exports from the command line.
+- [Classification and matches](https://python.neuroqp.com/0.1/guides/classification/index.md): Interpret and aggregate classification and match results.
+- [Low-level access](https://python.neuroqp.com/0.1/guides/low-level/index.md): Access export members and metadata directly.
+
+## API reference
+
+- [Entry points](https://python.neuroqp.com/0.1/reference/functions/index.md): Public package entry points.
+- [Project objects](https://python.neuroqp.com/0.1/reference/objects/index.md): Export, project, and image objects.
+- [Scientific results](https://python.neuroqp.com/0.1/reference/results/index.md): Classification and cell-match result objects.
+- [Metadata models](https://python.neuroqp.com/0.1/reference/models/index.md): Validated metadata models.
+- [Exceptions](https://python.neuroqp.com/0.1/reference/errors/index.md): Public exceptions and failure conditions.
+
+## Export specifications
+
+- [Current specification](https://python.neuroqp.com/0.1/specifications/index.md): Supported NeuroQP export format versions.
+- [Export v2](https://python.neuroqp.com/0.1/specifications/export-v2/index.md): Complete NeuroQP export format v2 specification.
+
+## Project information
+
+- [Changelog](https://python.neuroqp.com/0.1/changelog/index.md): User-visible package changes.
+- [Support](https://python.neuroqp.com/0.1/support/index.md): Support channels and issue-reporting guidance.
+
