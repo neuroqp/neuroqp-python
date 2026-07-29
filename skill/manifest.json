@@ -1,6 +1,6 @@
 {
   "changelogUrl": "https://python.neuroqp.com/latest/changelog/",
-  "latestPackageVersion": "0.1.0.dev0",
+  "latestPackageVersion": "0.1.0",
   "packageUrl": "https://pypi.org/project/neuroqp/",
   "schemaVersion": 1,
   "skills": {
