@@ -24,7 +24,7 @@ classifiers = [
 dependencies = [
   "numpy>=2.0,<3",
   "pydantic>=2.10,<3",
-  "tifffile[codecs,zarr]>=2026.7,<2027",
+  "tifffile[codecs,zarr]>=2026.7.14,<2027",
 ]
 
 [project.urls]
