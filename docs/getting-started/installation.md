@@ -2,60 +2,88 @@
 
 NeuroQP Python requires Python 3.12 through 3.14. Install it in a dedicated environment for each analysis project so its packages do not conflict with other work.
 
-## Create an analysis environment
+## Install NeuroQP Python
 
-=== "macOS and Linux"
+Choose the environment tool you already use. pip is available with Python; uv additionally records the analysis dependencies and their resolved versions.
+
+=== "pip"
+
+    Create and activate a virtual environment, then install NeuroQP Python.
+
+    **macOS and Linux**
 
     ```bash
-    python -m venv .venv
+    python3.14 -m venv .venv
     source .venv/bin/activate
-    python -m pip install --upgrade pip
+    python -m pip install neuroqp
     ```
 
-=== "Windows PowerShell"
+    **Windows PowerShell**
 
     ```powershell
-    py -m venv .venv
+    py -3.14 -m venv .venv
     .venv\Scripts\Activate.ps1
-    python -m pip install --upgrade pip
+    python -m pip install neuroqp
     ```
 
-Run the activation command again whenever you return to the analysis in a new terminal.
+    Run the activation command again whenever you return to the analysis in a new terminal. If you already have an active environment, only run `python -m pip install neuroqp`.
 
-## Install the current release candidate
+    Confirm the installation:
 
-The package is not on PyPI yet. Install the immutable source snapshot used by this documentation:
+    ```bash
+    python -c "import neuroqp; print(neuroqp.__version__)"
+    neuroqp --help
+    ```
 
-```bash
-python -m pip install "https://github.com/neuroqp/neuroqp-python/archive/bc913cd.zip"
-```
+=== "uv"
 
-Confirm that Python and the command-line interface can find it:
+    Initialize the analysis directory with Python 3.14 and add NeuroQP Python. uv creates and maintains the project’s `.venv` and `uv.lock`.
 
-```bash
-python -c "import neuroqp; print(neuroqp.__version__)"
-neuroqp --help
-```
+    ```bash
+    uv init --python 3.14
+    uv add neuroqp
+    ```
+
+    Run commands in that environment without activating it:
+
+    ```bash
+    uv run python -c "import neuroqp; print(neuroqp.__version__)"
+    uv run neuroqp --help
+    ```
 
 ## Use Jupyter
 
-Install JupyterLab in the same environment if you want to run the example notebooks or build your analysis interactively:
+Install JupyterLab in the same environment if you want to run the example notebooks or build your analysis interactively.
 
-```bash
-python -m pip install jupyterlab
-jupyter lab
-```
+=== "pip"
+
+    ```bash
+    python -m pip install jupyterlab
+    jupyter lab
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add jupyterlab
+    uv run jupyter lab
+    ```
 
 Open the downloaded notebook from JupyterLab. Its first code cell downloads the small synthetic example export if the file is not already in the notebook directory.
 
-## Published releases
+## Update NeuroQP Python
 
-After `0.1.0` is published on PyPI, install releases with:
+=== "pip"
 
-```bash
-python -m pip install neuroqp
-```
+    ```bash
+    python -m pip install --upgrade neuroqp
+    ```
 
-Use `python -m pip install --upgrade neuroqp` to update an existing environment.
+=== "uv"
+
+    ```bash
+    uv lock --upgrade-package neuroqp
+    uv sync
+    ```
 
 TIFF reading, LZW decompression, disk-backed arrays, and region selection are installed with NeuroQP Python. You do not need to install a separate TIFF plugin.

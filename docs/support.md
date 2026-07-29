@@ -16,4 +16,4 @@ Do not open a public issue for a vulnerability. Follow the private reporting pro
 
 ## Supported versions
 
-Until `0.1.0` is published, only the current release-candidate branch is supported. After publication, security fixes target the latest package minor and its supported export formats.
+Security fixes target the latest package minor and its supported export formats.

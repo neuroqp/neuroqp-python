@@ -45,6 +45,3 @@ NeuroQP Python connects your NeuroQP project to your own scientific analysis. It
     <a href="guides/classification/">Classification guide →</a>
   </div>
 </div>
-
-!!! note "Release status"
-    `0.1.0.dev0` is an unpublished release candidate. Install it from a source checkout until the first PyPI release.

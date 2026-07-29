@@ -2,24 +2,17 @@
 
 NeuroQP Python lets neuroscientists open a NeuroQP project export, navigate its animals, slices, stainings, images, and registrations, and analyze classification or cell-match results with Python and NumPy.
 
-> **Status:** `0.1.0.dev0` is an unpublished release candidate for NeuroQP export format v2.
-
 ## Installation
 
 Create and activate a virtual environment for your analysis:
 
 ```bash
-python -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate
+python -m pip install neuroqp
 ```
 
-Install the current release-candidate snapshot:
-
-```bash
-python -m pip install "https://github.com/neuroqp/neuroqp-python/archive/bc913cd.zip"
-```
-
-See the [installation guide](docs/getting-started/installation.md) for Windows instructions, JupyterLab setup, and the future PyPI installation command.
+See the [installation guide](docs/getting-started/installation.md) for uv, Windows, JupyterLab, and update instructions.
 
 ## Getting started
 
