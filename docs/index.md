@@ -26,7 +26,7 @@ with open_export("neuroqp_export.zip") as export:
     print(export.animals[0].slices)
 ```
 
-NeuroQP Python treats export files as untrusted input. Metadata is validated when an export opens; large NumPy result files are loaded only when requested.
+NeuroQP Python connects your NeuroQP project to your own scientific analysis. It keeps animals, slices, stainings, images, atlas registrations, classifications, and matched cells linked, so you can focus on quantifying, comparing, and visualizing results with the Python tools you already use.
 
 <div class="nqp-paths">
   <div>
@@ -40,9 +40,9 @@ NeuroQP Python treats export files as untrusted input. Metadata is validated whe
     <a href="concepts/object-model/">Object model →</a>
   </div>
   <div>
-    <h2>Check the wire format</h2>
-    <p>Read the normative contract for every supported export version.</p>
-    <a href="specifications/">Export specifications →</a>
+    <h2>Analyze your results</h2>
+    <p>Load classification and cell-match results for your own analysis.</p>
+    <a href="guides/classification/">Classification guide →</a>
   </div>
 </div>
 
