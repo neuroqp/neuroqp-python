@@ -1,0 +1,10 @@
+[
+  {
+    "_id": "animal-1",
+    "name": "Mouse 1",
+    "comments": null,
+    "sex": null,
+    "group": "control",
+    "condition": null
+  }
+]

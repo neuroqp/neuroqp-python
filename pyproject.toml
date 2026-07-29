@@ -1,0 +1,109 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "neuroqp"
+version = "0.1.0.dev0"
+description = "Python SDK for reading and working with NeuroQP project exports."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Pascal Dufour" }]
+keywords = ["neuroscience", "image-analysis", "neuroqp"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",
+]
+dependencies = [
+  "numpy>=2.0,<3",
+  "pydantic>=2.10,<3",
+  "tifffile[codecs,zarr]>=2026.7,<2027",
+]
+
+[project.urls]
+Homepage = "https://github.com/neuroqp/neuroqp-python"
+Documentation = "https://python.neuroqp.com/"
+Repository = "https://github.com/neuroqp/neuroqp-python"
+Issues = "https://github.com/neuroqp/neuroqp-python/issues"
+Changelog = "https://github.com/neuroqp/neuroqp-python/blob/main/CHANGELOG.md"
+
+[project.scripts]
+neuroqp = "neuroqp.cli:main"
+
+[dependency-groups]
+dev = [
+  "hatchling>=1.27",
+  "mypy>=1.15",
+  "pytest>=8.3",
+  "pytest-cov>=6",
+  "ruff>=0.11",
+  "tox>=4.24",
+  "tox-uv>=1.25",
+]
+docs = [
+  "mike>=2.1",
+  "mkdocs-jupyter>=0.25",
+  "mkdocs-llmstxt>=0.5,<0.6",
+  "mkdocs-material>=9.6",
+  "mkdocstrings[python]>=0.29",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/neuroqp"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"skills/neuroqp-python" = "neuroqp/_skill_bundle/neuroqp-python"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/docs",
+  "/skills",
+  "/scripts",
+  "/CHANGELOG.md",
+  "/CODE_OF_CONDUCT.md",
+  "/CONTRIBUTING.md",
+  "/LICENSE",
+  "/SECURITY.md",
+  "/README.md",
+  "/mkdocs.yml",
+  "/pyproject.toml",
+  "/tox.ini",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+extend-exclude = ["*.md"]
+force-exclude = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers --cov=neuroqp --cov-branch --cov-report=term-missing --cov-fail-under=90"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["neuroqp"]
+
+[tool.coverage.report]
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+  "raise NotImplementedError",
+]

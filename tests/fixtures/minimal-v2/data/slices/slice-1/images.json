@@ -1,0 +1,12 @@
+[
+  {
+    "imageId": "image-1",
+    "archivePath": "data/slices/slice-1/images/image-1__minimal.tif",
+    "height": 2,
+    "width": 2,
+    "stainingId": "staining-1",
+    "sliceId": "slice-1",
+    "magnification": "10x",
+    "originalFilename": "minimal.tif"
+  }
+]

@@ -1,0 +1,35 @@
+name: Feature request
+description: Propose a focused addition to the public SDK or CLI
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What analysis or export workflow is blocked today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed public API
+      description: Show the smallest Python or CLI interface that would solve the problem.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Explain why existing SDK objects or NumPy are insufficient.
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This request does not require sharing a private project export.
+          required: true

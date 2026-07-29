@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "name": "neuroqp-python",
+  "version": "0.1.0",
+  "neuroqpMinor": "0.1",
+  "manifestUrl": "https://python.neuroqp.com/skill/manifest.json"
+}

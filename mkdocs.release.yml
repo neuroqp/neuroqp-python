@@ -1,0 +1,5 @@
+INHERIT: mkdocs.yml
+
+extra:
+  version:
+    provider: mike

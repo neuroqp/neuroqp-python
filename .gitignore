@@ -2,13 +2,16 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .coverage
+.cache/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
 .tox/
 .venv/
+.package-venv/
 build/
 dist/
 htmlcov/
+site/
+docs/examples/neuroqp-example-v2.zip
 plans/
-
