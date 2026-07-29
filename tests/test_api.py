@@ -39,7 +39,9 @@ def test_object_graph_and_artifacts(tmp_path: Path) -> None:
         assert image.metadata.archive_path.endswith("image-1__minimal.tif")
         assert slice_.find_images(staining="DAPI", magnification="10x") == (image,)
         assert slice_.find_images(filename="missing") == ()
-        assert image.open().read() == b"synthetic fixture bytes\n"
+        assert (
+            image.open().read() == (MINIMAL / image.metadata.archive_path).read_bytes()
+        )
         assert slice_.cell_mask is not None
         assert slice_.cell_mask.open().read() == b"mask"
         assert export.member("manifest.json").open().read().startswith(b"{")
