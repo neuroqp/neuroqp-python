@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% if page.nb_url %}
+    <p class="nqp-notebook-actions">
+      <a href="{{ page.nb_url }}" class="md-button md-button--primary" download>Download notebook (.ipynb)</a>
+    </p>
+  {% endif %}
+  {{ super() }}
+{% endblock %}
