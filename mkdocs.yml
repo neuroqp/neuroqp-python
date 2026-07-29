@@ -75,6 +75,7 @@ plugins:
           - index.md: What NeuroQP Python offers for export-based neuroscience analysis.
         Getting started:
           - getting-started/installation.md: Install NeuroQP Python for an analysis environment.
+          - getting-started/ai-coding-agents.md: Use the installable skill or online AI-readable documentation with Codex, Claude Code, and other coding agents.
           - getting-started/quickstart.md: Open an export and begin navigating project data.
         Example notebooks:
           - examples/index.md: Choose and download an executable example notebook.
@@ -129,6 +130,7 @@ nav:
   - Overview: index.md
   - Getting started:
       - Installation: getting-started/installation.md
+      - AI coding agents: getting-started/ai-coding-agents.md
       - Quickstart: getting-started/quickstart.md
       - Example notebooks:
           - Examples: examples/index.md

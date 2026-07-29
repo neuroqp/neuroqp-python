@@ -53,6 +53,7 @@ ZIP archives and extracted export directories are both supported. Continue with 
 ## Project links
 
 - [Documentation](https://python.neuroqp.com/)
+- [Using NeuroQP with AI coding agents](https://python.neuroqp.com/latest/getting-started/ai-coding-agents/)
 - [AI-readable documentation](https://python.neuroqp.com/llms.txt)
 - [Export v2 specification](https://python.neuroqp.com/latest/specifications/export-v2/)
 - [Versions](https://github.com/neuroqp/neuroqp-python/tags)
