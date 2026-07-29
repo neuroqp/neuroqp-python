@@ -15,3 +15,8 @@ Thank you for contributing to NeuroQP Python.
 External pull requests are welcome. Maintainers may decline speculative abstractions, new dependencies without a clear need, or features outside the package’s documented scope. By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 Security vulnerabilities must be reported privately through the process in [SECURITY.md](SECURITY.md), never through a public issue or pull request.
+
+## Releases
+
+Maintainers must follow [RELEASING.md](RELEASING.md). Normal pull requests do
+not change package versions or publish artifacts.
