@@ -52,15 +52,14 @@ ZIP archives and extracted export directories are both supported. Continue with 
 
 ## Project links
 
-- [Documentation](docs/index.md)
-- [Export v2 specification](docs/specifications/export-v2.md)
+- [Documentation](https://python.neuroqp.com/)
+- [AI-readable documentation](https://python.neuroqp.com/llms.txt)
+- [Export v2 specification](https://python.neuroqp.com/latest/specifications/export-v2/)
 - [Versions](https://github.com/neuroqp/neuroqp-python/tags)
 - [Releases](https://github.com/neuroqp/neuroqp-python/releases)
 - [Changelog](CHANGELOG.md)
 - [Questions and support](https://github.com/neuroqp/neuroqp-python/discussions)
 - [Issue tracker](https://github.com/neuroqp/neuroqp-python/issues)
-
-The public versioned documentation URL will be added after the first release deployment.
 
 ## Supported versions
 

@@ -1,5 +1,6 @@
 site_name: NeuroQP Python
 site_description: Python SDK and CLI for NeuroQP project exports
+site_url: https://python.neuroqp.com/
 site_author: NeuroQP
 repo_url: https://github.com/neuroqp/neuroqp-python
 repo_name: neuroqp/neuroqp-python
@@ -61,6 +62,45 @@ plugins:
       allow_errors: false
       execute: true
       include_source: true
+  - llmstxt:
+      full_output: llms-full.txt
+      preprocess: scripts/llmstxt_preprocess.py
+      markdown_description: |
+        Use these pages to write Python analyses for NeuroQP project exports.
+        Start with the quickstart, then use the guides, API reference, and export
+        specification as needed. The complete documentation is available in
+        [llms-full.txt](llms-full.txt).
+      sections:
+        Overview:
+          - index.md: What NeuroQP Python offers for export-based neuroscience analysis.
+        Getting started:
+          - getting-started/installation.md: Install NeuroQP Python for an analysis environment.
+          - getting-started/quickstart.md: Open an export and begin navigating project data.
+        Example notebooks:
+          - examples/index.md: Choose and download an executable example notebook.
+          - examples/open-and-navigate.ipynb: Open an export and navigate its project objects.
+          - examples/validate-export.ipynb: Validate an export before starting an analysis.
+        Concepts:
+          - concepts/exports.md: Understand export containers, files, limits, and access patterns.
+          - concepts/object-model.md: Understand project objects and their lifecycle.
+        Guides:
+          - guides/navigation.md: Find animals, slices, stainings, images, and registrations.
+          - guides/images.md: Inspect and process small or very large exported images.
+          - guides/validation-cli.md: Validate and inspect exports from the command line.
+          - guides/classification.md: Interpret and aggregate classification and match results.
+          - guides/low-level.md: Access export members and metadata directly.
+        API reference:
+          - reference/functions.md: Public package entry points.
+          - reference/objects.md: Export, project, and image objects.
+          - reference/results.md: Classification and cell-match result objects.
+          - reference/models.md: Validated metadata models.
+          - reference/errors.md: Public exceptions and failure conditions.
+        Export specifications:
+          - specifications/index.md: Supported NeuroQP export format versions.
+          - specifications/export-v2.md: Complete NeuroQP export format v2 specification.
+        Project information:
+          - changelog.md: User-visible package changes.
+          - support.md: Support channels and issue-reporting guidance.
 
 markdown_extensions:
   - admonition

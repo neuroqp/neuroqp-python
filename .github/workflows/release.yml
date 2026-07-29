@@ -132,4 +132,15 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          uv run mike deploy --config-file mkdocs.release.yml --branch docs-site --push --update-aliases "$MINOR" latest
+          uv run mike deploy --config-file mkdocs.release.yml --branch docs-site --update-aliases "$MINOR" latest
+          uv run mike set-default --config-file mkdocs.release.yml --branch docs-site --ignore-remote-status latest
+
+          DOCS_WORKTREE="$RUNNER_TEMP/neuroqp-python-docs"
+          git worktree add "$DOCS_WORKTREE" docs-site
+          cp "$DOCS_WORKTREE/$MINOR/llms.txt" "$DOCS_WORKTREE/llms.txt"
+          cp "$DOCS_WORKTREE/$MINOR/llms-full.txt" "$DOCS_WORKTREE/llms-full.txt"
+          git -C "$DOCS_WORKTREE" add llms.txt llms-full.txt
+          if ! git -C "$DOCS_WORKTREE" diff --cached --quiet; then
+            git -C "$DOCS_WORKTREE" commit -m "Update AI-readable documentation for $MINOR"
+          fi
+          git -C "$DOCS_WORKTREE" push origin docs-site
