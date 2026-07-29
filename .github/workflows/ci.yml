@@ -30,14 +30,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest, python: "3.10" }
-          - { os: ubuntu-latest, python: "3.11" }
           - { os: ubuntu-latest, python: "3.12" }
           - { os: ubuntu-latest, python: "3.13" }
           - { os: ubuntu-latest, python: "3.14" }
-          - { os: windows-latest, python: "3.10" }
+          - { os: windows-latest, python: "3.12" }
           - { os: windows-latest, python: "3.14" }
-          - { os: macos-latest, python: "3.10" }
+          - { os: macos-latest, python: "3.12" }
           - { os: macos-latest, python: "3.14" }
     runs-on: ${{ matrix.os }}
     steps:
@@ -61,7 +59,7 @@ jobs:
       - run: uv build
       - run: uv venv --python 3.14 .package-venv
       - run: uv pip install --python .package-venv/bin/python dist/*.whl
-      - run: .package-venv/bin/python -c "import neuroqp; assert neuroqp.__version__ == '0.1.0.dev0'"
+      - run: .package-venv/bin/python -c "import importlib.metadata; import neuroqp; assert neuroqp.__version__ == importlib.metadata.version('neuroqp')"
       - run: .package-venv/bin/neuroqp --help
       - run: |
           mkdir "$RUNNER_TEMP/skill-install"
