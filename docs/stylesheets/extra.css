@@ -25,6 +25,9 @@
   --nqp-search-border: oklch(0.84 0.014 197.1);
   --nqp-search-fg: oklch(0.22 0.01 223.9);
   --nqp-search-placeholder: oklch(0.42 0.012 214.3);
+  --nqp-toast-bg: oklch(0.22 0.01 223.9);
+  --nqp-toast-border: oklch(0.3 0.012 214.3);
+  --nqp-toast-fg: oklch(0.98 0.003 197.1);
 }
 
 [data-md-color-scheme="neuroqp-dark"] {
@@ -43,17 +46,32 @@
   --md-accent-bg-color: oklch(0.148 0.004 228.8);
   --md-code-fg-color: oklch(0.92 0.006 197.1);
   --md-code-bg-color: oklch(0.19 0.008 223.9);
+  --md-admonition-fg-color: oklch(0.92 0.006 197.1);
+  --md-admonition-bg-color: oklch(0.185 0.007 223.9);
   --md-typeset-color: var(--md-default-fg-color);
   --md-typeset-a-color: var(--md-accent-fg-color);
+  --nqp-code-blue: oklch(0.76 0.13 250);
+  --nqp-code-green: oklch(0.78 0.14 155);
+  --nqp-code-muted: oklch(0.68 0.025 220);
+  --nqp-code-orange: oklch(0.8 0.13 70);
+  --nqp-code-purple: oklch(0.76 0.15 315);
+  --nqp-code-red: oklch(0.72 0.18 25);
+  --nqp-code-text: oklch(0.86 0.014 220);
   --nqp-border: oklch(1 0 0 / 10%);
   --nqp-copy-fg: oklch(0.72 0.008 197.1);
   --nqp-header: oklch(0.185 0.007 223.9);
   --nqp-header-fg: oklch(0.987 0.002 197.1);
+  --nqp-search-active-bg: oklch(0.225 0.009 223.9);
+  --nqp-search-active-border: oklch(0.36 0.014 216.9);
+  --nqp-search-active-meta: oklch(0.265 0.01 223.9);
   --nqp-search-bg: oklch(0.265 0.01 223.9);
   --nqp-search-bg-hover: oklch(0.3 0.012 216.9);
   --nqp-search-border: oklch(0.38 0.014 216.9);
   --nqp-search-fg: oklch(0.94 0.005 197.1);
   --nqp-search-placeholder: oklch(0.72 0.008 197.1);
+  --nqp-toast-bg: oklch(0.3 0.012 216.9);
+  --nqp-toast-border: oklch(0.42 0.016 216.9);
+  --nqp-toast-fg: oklch(0.96 0.004 197.1);
 }
 
 :root {
@@ -157,6 +175,51 @@
   letter-spacing: 0.01em;
 }
 
+.md-dialog {
+  background-color: var(--nqp-toast-bg);
+  border: 1px solid var(--nqp-toast-border);
+}
+
+.md-dialog .md-dialog__inner {
+  color: var(--nqp-toast-fg);
+}
+
+[data-md-color-scheme="neuroqp-dark"]
+  [data-md-toggle="search"]:checked
+  ~ .md-header
+  .md-search__form {
+  background-color: var(--nqp-search-active-bg);
+  border: 1px solid var(--nqp-search-active-border);
+  border-bottom-color: var(--nqp-border);
+}
+
+[data-md-color-scheme="neuroqp-dark"]
+  [data-md-toggle="search"]:checked
+  ~ .md-header
+  .md-search__scrollwrap {
+  background-color: var(--nqp-search-active-bg);
+  border: 1px solid var(--nqp-search-active-border);
+  border-top: 0;
+}
+
+[data-md-color-scheme="neuroqp-dark"]
+  [data-md-toggle="search"]:checked
+  ~ .md-header
+  :is(.md-search__input, .md-search__icon) {
+  color: var(--nqp-search-fg);
+}
+
+[data-md-color-scheme="neuroqp-dark"]
+  [data-md-toggle="search"]:checked
+  ~ .md-header
+  .md-search__suggest {
+  color: var(--nqp-search-placeholder);
+}
+
+[data-md-color-scheme="neuroqp-dark"] .md-search-result__meta {
+  background-color: var(--nqp-search-active-meta);
+}
+
 .md-typeset {
   color: var(--md-typeset-color);
   font-size: 0.82rem;
@@ -182,6 +245,40 @@
   color: var(--md-code-fg-color);
   border-radius: 0.2rem;
   font-variant-ligatures: none;
+}
+
+[data-md-color-scheme="neuroqp-dark"] .highlight code,
+[data-md-color-scheme="neuroqp-dark"] .highlight code span {
+  color: var(--nqp-code-text);
+}
+
+[data-md-color-scheme="neuroqp-dark"] .highlight :is(.c, .c1, .ch, .cm, .cp, .cpf, .cs) {
+  color: var(--nqp-code-muted);
+}
+
+[data-md-color-scheme="neuroqp-dark"] .highlight :is(.k, .kc, .kd, .kn, .kp, .kr, .kt) {
+  color: var(--nqp-code-blue);
+}
+
+[data-md-color-scheme="neuroqp-dark"] .highlight :is(.s, .s1, .s2, .sa, .sb, .sc, .sd, .se, .sh, .si, .sr, .ss, .sx) {
+  color: var(--nqp-code-green);
+}
+
+[data-md-color-scheme="neuroqp-dark"] .highlight :is(.m, .mb, .mf, .mh, .mi, .mo, .il) {
+  color: var(--nqp-code-orange);
+}
+
+[data-md-color-scheme="neuroqp-dark"] .highlight :is(.nc, .nd, .ne, .nf, .fm) {
+  color: var(--nqp-code-purple);
+}
+
+[data-md-color-scheme="neuroqp-dark"] .highlight :is(.err, .gr, .gt) {
+  background-color: transparent;
+  color: var(--nqp-code-red);
+}
+
+[data-md-color-scheme="neuroqp-dark"] .md-typeset :is(.admonition, details) {
+  box-shadow: none;
 }
 
 .md-typeset .md-code__nav,
