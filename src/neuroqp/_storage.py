@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import shutil
 import stat
+import tempfile
 import zipfile
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
+from contextlib import AbstractContextManager, contextmanager
 from pathlib import Path, PurePosixPath
+from typing import BinaryIO, cast
 
 from .models import ExportLimits, ValidationIssue
 
@@ -35,9 +40,46 @@ class Storage(ABC):
 
     members: frozenset[str]
 
-    @abstractmethod
     def read(self, member: str, max_bytes: int | None = None) -> bytes:
-        """Read a member without extracting it."""
+        """Read a member into memory, optionally enforcing a byte limit."""
+
+        if max_bytes is not None and self.size(member) > max_bytes:
+            raise StorageError(
+                [_issue(member, "metadata_limit", f"member exceeds {max_bytes} bytes")]
+            )
+        try:
+            with self.open(member) as stream:
+                data = (
+                    stream.read() if max_bytes is None else stream.read(max_bytes + 1)
+                )
+        except StorageError:
+            raise
+        except (OSError, zipfile.BadZipFile, RuntimeError) as error:
+            raise StorageError(
+                [_issue(member, "corrupt_member", f"cannot read member: {error}")]
+            ) from error
+        if max_bytes is not None and len(data) > max_bytes:
+            raise StorageError(
+                [_issue(member, "metadata_limit", f"member exceeds {max_bytes} bytes")]
+            )
+        return data
+
+    @abstractmethod
+    def open(self, member: str) -> BinaryIO:
+        """Open a member as a binary stream."""
+
+    @abstractmethod
+    def size(self, member: str) -> int:
+        """Return the encoded member size in bytes."""
+
+    @abstractmethod
+    def as_path(
+        self,
+        member: str,
+        *,
+        directory: str | Path | None = None,
+    ) -> AbstractContextManager[Path]:
+        """Yield a filesystem path for a member."""
 
     @abstractmethod
     def close(self) -> None:
@@ -78,7 +120,7 @@ class DirectoryStorage(Storage):
             raise StorageError(issues)
         self.members = frozenset(members)
 
-    def read(self, member: str, max_bytes: int | None = None) -> bytes:
+    def _path(self, member: str) -> Path:
         if member not in self.members:
             raise FileNotFoundError(member)
         path = (self._root / member).resolve()
@@ -86,11 +128,23 @@ class DirectoryStorage(Storage):
             raise StorageError(
                 [_issue(member, "unsafe_path", "member resolves outside export root")]
             )
-        if max_bytes is not None and path.stat().st_size > max_bytes:
-            raise StorageError(
-                [_issue(member, "metadata_limit", f"member exceeds {max_bytes} bytes")]
-            )
-        return path.read_bytes()
+        return path
+
+    def open(self, member: str) -> BinaryIO:
+        return self._path(member).open("rb")
+
+    def size(self, member: str) -> int:
+        return self._path(member).stat().st_size
+
+    @contextmanager
+    def as_path(
+        self,
+        member: str,
+        *,
+        directory: str | Path | None = None,
+    ) -> Iterator[Path]:
+        del directory
+        yield self._path(member)
 
     def close(self) -> None:
         """Directory storage owns no open resources."""
@@ -155,11 +209,17 @@ class ZipStorage(Storage):
                 )
             )
         if total > limits.max_total_uncompressed_bytes:
+            total_gib = total / 1024**3
+            limit_gib = limits.max_total_uncompressed_bytes / 1024**3
             issues.append(
                 _issue(
                     str(path),
                     "size_limit",
-                    "ZIP declared uncompressed size exceeds the configured limit",
+                    f"ZIP declares {total} bytes ({total_gib:.2f} GiB) uncompressed, "
+                    f"above the configured limit of "
+                    f"{limits.max_total_uncompressed_bytes} bytes "
+                    f"({limit_gib:.2f} GiB). Extract this trusted ZIP and pass the "
+                    "resulting directory to open_export().",
                 )
             )
         if issues:
@@ -169,28 +229,50 @@ class ZipStorage(Storage):
         self._infos = infos
         self.members = frozenset(infos)
 
-    def read(self, member: str, max_bytes: int | None = None) -> bytes:
+    def _info(self, member: str) -> zipfile.ZipInfo:
         info = self._infos.get(member)
         if info is None:
             raise FileNotFoundError(member)
-        if max_bytes is not None and info.file_size > max_bytes:
-            raise StorageError(
-                [_issue(member, "metadata_limit", f"member exceeds {max_bytes} bytes")]
-            )
+        return info
+
+    def open(self, member: str) -> BinaryIO:
+        info = self._info(member)
         try:
-            with self._archive.open(info) as stream:
-                data = (
-                    stream.read() if max_bytes is None else stream.read(max_bytes + 1)
-                )
+            return cast(BinaryIO, self._archive.open(info))
         except (OSError, zipfile.BadZipFile, RuntimeError) as error:
             raise StorageError(
-                [_issue(member, "corrupt_member", f"cannot read ZIP member: {error}")]
+                [_issue(member, "corrupt_member", f"cannot open ZIP member: {error}")]
             ) from error
-        if max_bytes is not None and len(data) > max_bytes:
-            raise StorageError(
-                [_issue(member, "metadata_limit", f"member exceeds {max_bytes} bytes")]
-            )
-        return data
+
+    def size(self, member: str) -> int:
+        return self._info(member).file_size
+
+    @contextmanager
+    def as_path(
+        self,
+        member: str,
+        *,
+        directory: str | Path | None = None,
+    ) -> Iterator[Path]:
+        name = PurePosixPath(member).name
+        with tempfile.TemporaryDirectory(prefix="neuroqp-", dir=directory) as temporary:
+            path = Path(temporary) / name
+            try:
+                with self.open(member) as source, path.open("wb") as target:
+                    shutil.copyfileobj(source, target, length=1024**2)
+            except StorageError:
+                raise
+            except (OSError, zipfile.BadZipFile, RuntimeError) as error:
+                raise StorageError(
+                    [
+                        _issue(
+                            member,
+                            "corrupt_member",
+                            f"cannot copy ZIP member: {error}",
+                        )
+                    ]
+                ) from error
+            yield path
 
     def close(self) -> None:
         self._archive.close()

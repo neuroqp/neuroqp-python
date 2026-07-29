@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from neuroqp import ValidationIssue, ValidationReport
 from neuroqp.cli import main
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -68,3 +69,38 @@ def test_inspect_invalid_json(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["inspect", str(INVALID), "--json"]) == 1
     output = capsys.readouterr().out
     assert json.loads(output)["valid"] is False
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+def test_validate_surfaces_large_zip_guidance(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    as_json: bool,
+) -> None:
+    message = (
+        "ZIP exceeds the configured limit. Extract this trusted ZIP and pass "
+        "the resulting directory to open_export()."
+    )
+    report = ValidationReport(
+        issues=(
+            ValidationIssue(
+                path="large.zip",
+                code="size_limit",
+                message=message,
+            ),
+        )
+    )
+
+    def validate(_source: Path) -> ValidationReport:
+        return report
+
+    monkeypatch.setattr("neuroqp.cli.validate_export", validate)
+    arguments = ["validate", "large.zip"]
+    if as_json:
+        arguments.append("--json")
+    assert main(arguments) == 1
+    output = capsys.readouterr().out
+    if as_json:
+        assert json.loads(output)["issues"][0]["message"] == message
+    else:
+        assert message in output

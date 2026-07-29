@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import AbstractContextManager, ExitStack, contextmanager
 from dataclasses import dataclass
 from html import escape
-from io import BytesIO
-from typing import TYPE_CHECKING, Any, BinaryIO, Generic, NoReturn, TypeVar
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, BinaryIO, NoReturn
 
 from ._storage import StorageError
 from .errors import AmbiguousNameError, InvalidExportError, ObjectNotFoundError
@@ -26,10 +28,6 @@ from .models import Staining as StainingMetadata
 if TYPE_CHECKING:
     from ._project import ProjectExport
 
-MetadataT = TypeVar("MetadataT")
-ItemT = TypeVar("ItemT")
-
-
 def _object_id(value: object) -> str:
     if isinstance(value, str):
         return value
@@ -39,7 +37,7 @@ def _object_id(value: object) -> str:
     raise TypeError("expected an object or ID string")
 
 
-def _one(items: tuple[ItemT, ...], label: str, value: object) -> ItemT:
+def _one[ItemT](items: tuple[ItemT, ...], label: str, value: object) -> ItemT:
     if not items:
         raise ObjectNotFoundError(f"{label} not found: {value}")
     if len(items) > 1:
@@ -90,16 +88,81 @@ class FileArtifact(_Display):
         return (("path", self.path),)
 
     def open(self) -> BinaryIO:
-        """Open an independent in-memory binary stream."""
+        """Open the artifact as a binary stream.
+
+        Returns
+        -------
+        BinaryIO
+            A native file stream for an extracted export or a streaming ZIP
+            member.
+
+        Notes
+        -----
+        Close the stream before closing its parent export.
+        """
 
         self._export._ensure_open()
         try:
-            return BytesIO(self._export._storage.read(self.path))
+            return self._export._storage.open(self.path)
         except (FileNotFoundError, StorageError) as error:
             _invalid(self.path, "unreadable_member", str(error))
 
+    @property
+    def size_bytes(self) -> int:
+        """Encoded artifact size in bytes.
 
-class _Bound(_Display, Generic[MetadataT]):
+        This is the stored file size, not the memory required for decoded
+        image pixels.
+        """
+
+        self._export._ensure_open()
+        try:
+            return self._export._storage.size(self.path)
+        except (FileNotFoundError, OSError, StorageError) as error:
+            _invalid(self.path, "unreadable_member", str(error))
+
+    @contextmanager
+    def as_path(
+        self,
+        *,
+        directory: str | Path | None = None,
+    ) -> Iterator[Path]:
+        """Provide a filesystem path for the artifact.
+
+        Parameters
+        ----------
+        directory
+            Scratch directory used when a ZIP member must be copied.
+
+        Returns
+        -------
+        AbstractContextManager[Path]
+            A context manager yielding the original path for a directory export
+            or a temporary copy for a ZIP export.
+
+        Notes
+        -----
+        Use the path only inside this context and while the parent export is
+        open. Temporary ZIP copies are removed when the context exits.
+        """
+
+        self._export._ensure_open()
+        stack = ExitStack()
+        try:
+            path = stack.enter_context(
+                self._export._storage.as_path(
+                    self.path,
+                    directory=directory,
+                )
+            )
+        except (FileNotFoundError, OSError, StorageError) as error:
+            stack.close()
+            _invalid(self.path, "unreadable_member", str(error))
+        with stack:
+            yield path
+
+
+class _Bound[MetadataT](_Display):
     def __init__(self, export: ProjectExport, metadata: MetadataT) -> None:
         self._export = export
         self.metadata = metadata
@@ -174,6 +237,23 @@ class Image(_Bound[ImageMetadata]):
         """Open the exact archived image member."""
 
         return FileArtifact(self._export, self.metadata.archive_path).open()
+
+    @property
+    def size_bytes(self) -> int:
+        """Encoded image-file size in bytes."""
+
+        return FileArtifact(self._export, self.metadata.archive_path).size_bytes
+
+    def as_path(
+        self,
+        *,
+        directory: str | Path | None = None,
+    ) -> AbstractContextManager[Path]:
+        """Provide the image as a filesystem path within a context manager."""
+
+        return FileArtifact(self._export, self.metadata.archive_path).as_path(
+            directory=directory
+        )
 
     def _display_items(self) -> tuple[tuple[str, object], ...]:
         return (

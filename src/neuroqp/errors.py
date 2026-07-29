@@ -15,9 +15,14 @@ class InvalidExportError(NeuroQPError):
     def __init__(self, report: ValidationReport) -> None:
         self.report = report
         count = len(report.issues)
-        super().__init__(
-            f"invalid NeuroQP export ({count} issue{'s' if count != 1 else ''})"
+        message = f"invalid NeuroQP export ({count} issue{'s' if count != 1 else ''})"
+        size_issue = next(
+            (issue for issue in report.issues if issue.code == "size_limit"),
+            None,
         )
+        if size_issue is not None:
+            message = f"{message}: {size_issue.message}"
+        super().__init__(message)
 
 
 class UnsupportedVersionError(InvalidExportError):

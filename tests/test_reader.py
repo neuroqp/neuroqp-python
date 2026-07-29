@@ -185,7 +185,9 @@ def test_zip_rejects_unsafe_paths(tmp_path: Path, member: str, code: str) -> Non
         info = zipfile.ZipInfo(member)
         info.filename = member
         archive.writestr(info, "{}")
-    assert validate_export(path).issues[0].code == code
+    issue = validate_export(path).issues[0]
+    assert issue.code == code
+    assert "Extract" not in issue.message
 
 
 def test_zip_rejects_duplicate_members(tmp_path: Path) -> None:
@@ -214,6 +216,31 @@ def test_zip_member_and_total_limits(tmp_path: Path) -> None:
     )
     codes = {issue.code for issue in report.issues}
     assert {"member_limit", "size_limit", "compression_limit"} <= codes
+    size_issue = next(issue for issue in report.issues if issue.code == "size_limit")
+    assert "200 bytes" in size_issue.message
+    assert "1 bytes" in size_issue.message
+    assert "Extract this trusted ZIP" in size_issue.message
+    assert "open_export()" in size_issue.message
+    with pytest.raises(InvalidExportError) as caught:
+        open_export(
+            path,
+            limits=ExportLimits(
+                max_members=1,
+                max_total_uncompressed_bytes=1,
+                max_compression_ratio=1,
+            ),
+        )
+    assert "Extract this trusted ZIP" in str(caught.value)
+    for issue in report.issues:
+        if issue.code != "size_limit":
+            assert "Extract" not in issue.message
+
+
+def test_directory_ignores_total_size_limit() -> None:
+    assert validate_export(
+        VALID,
+        limits=ExportLimits(max_total_uncompressed_bytes=1),
+    ).valid
 
 
 def test_directory_rejects_symlink(tmp_path: Path) -> None:

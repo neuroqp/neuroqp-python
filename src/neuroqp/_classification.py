@@ -48,7 +48,23 @@ class _MatchData:
 
 
 class Classification(_Display):
-    """One selected staining's classifier and results."""
+    """Provide classifier metadata and results for one staining.
+
+    Attributes
+    ----------
+    staining
+        Classified project staining.
+    classifier
+        Selected classifier metadata.
+    training_summary
+        Training summary current at export time.
+    training_samples
+        Exported positive and negative training samples.
+    result_index
+        Slice-level result metadata available for lazy loading.
+    omitted_slices
+        Documented slices without a result.
+    """
 
     def __init__(self, export: ProjectExport, data: _ClassificationData) -> None:
         self._export = export
@@ -76,7 +92,22 @@ class Classification(_Display):
         label: str | None = None,
         cell_id: int | None = None,
     ) -> tuple[TrainingSample, ...]:
-        """Filter eager training samples."""
+        """Filter exported training samples.
+
+        Parameters
+        ----------
+        slice
+            Slice object, metadata record, or ID to include.
+        label
+            Exported label, normally ``"on"`` or ``"off"``.
+        cell_id
+            Cell label to include.
+
+        Returns
+        -------
+        tuple of TrainingSample
+            Samples matching every supplied filter.
+        """
 
         slice_id = _object_id(slice) if slice is not None else None
         return tuple(
@@ -93,7 +124,20 @@ class Classification(_Display):
         slice: Slice | SliceMetadata | str | None = None,
         reason_code: str | None = None,
     ) -> tuple[SliceExclusion, ...]:
-        """Filter documented result omissions."""
+        """Filter slices that have no classification result.
+
+        Parameters
+        ----------
+        slice
+            Slice object, metadata record, or ID to include.
+        reason_code
+            Stable exporter reason code to include.
+
+        Returns
+        -------
+        tuple of SliceExclusion
+            Omissions matching every supplied filter.
+        """
 
         slice_id = _object_id(slice) if slice is not None else None
         return tuple(
@@ -106,7 +150,23 @@ class Classification(_Display):
     def result_info(
         self, slice_: Slice | SliceMetadata | str
     ) -> ClassificationResultInfo:
-        """Get result index metadata for one slice."""
+        """Get result metadata for one slice without loading arrays.
+
+        Parameters
+        ----------
+        slice_
+            Slice object, metadata record, or ID.
+
+        Returns
+        -------
+        ClassificationResultInfo
+            Slice-level result metadata.
+
+        Raises
+        ------
+        ObjectNotFoundError
+            If the slice has no classification result.
+        """
 
         slice_id = _object_id(slice_)
         return _one(
@@ -116,13 +176,46 @@ class Classification(_Display):
         )
 
     def load_result(self, slice_: Slice | SliceMetadata | str) -> ClassificationResult:
-        """Load and validate one slice's classification arrays."""
+        """Load and validate one slice's classification arrays.
+
+        Parameters
+        ----------
+        slice_
+            Slice object, metadata record, or ID.
+
+        Returns
+        -------
+        ClassificationResult
+            Aligned cell IDs, centroids, probabilities, and classifications.
+
+        Raises
+        ------
+        ObjectNotFoundError
+            If the slice has no classification result.
+        InvalidExportError
+            If the stored arrays fail validation.
+        ClosedExportError
+            If the parent export is closed.
+        """
 
         self._export._ensure_open()
         return _load_classification(self._export._storage, self.result_info(slice_))
 
     def load_results(self) -> ClassificationResults:
-        """Load and concatenate all classification results."""
+        """Load and concatenate every available slice result.
+
+        Returns
+        -------
+        ClassificationResults
+            Aligned arrays with a slice ID for every detected cell.
+
+        Raises
+        ------
+        InvalidExportError
+            If any stored result fails validation.
+        ClosedExportError
+            If the parent export is closed.
+        """
 
         return ClassificationResults.from_results(
             tuple(self.load_result(item.slice_id) for item in self.result_index)
@@ -130,7 +223,20 @@ class Classification(_Display):
 
 
 class Match(_Display):
-    """One staining-pair match and its results."""
+    """Provide cell-match metadata and results for one staining pair.
+
+    Attributes
+    ----------
+    pair_key
+        Opaque exported key used to retrieve this match.
+    staining_a, staining_b
+        Stainings in the exported pair definition. Read each result's metadata
+        for its actual NPZ side orientation.
+    result_index
+        Slice-level match metadata available for lazy loading.
+    omitted_slices
+        Documented slices without a match result.
+    """
 
     def __init__(self, export: ProjectExport, data: _MatchData) -> None:
         self._export = export
@@ -155,7 +261,20 @@ class Match(_Display):
         slice: Slice | SliceMetadata | str | None = None,
         reason_code: str | None = None,
     ) -> tuple[SliceExclusion, ...]:
-        """Filter documented result omissions."""
+        """Filter slices that have no match result.
+
+        Parameters
+        ----------
+        slice
+            Slice object, metadata record, or ID to include.
+        reason_code
+            Stable exporter reason code to include.
+
+        Returns
+        -------
+        tuple of SliceExclusion
+            Omissions matching every supplied filter.
+        """
 
         slice_id = _object_id(slice) if slice is not None else None
         return tuple(
@@ -166,7 +285,23 @@ class Match(_Display):
         )
 
     def result_info(self, slice_: Slice | SliceMetadata | str) -> MatchResultInfo:
-        """Get match index metadata for one slice."""
+        """Get match metadata for one slice without loading arrays.
+
+        Parameters
+        ----------
+        slice_
+            Slice object, metadata record, or ID.
+
+        Returns
+        -------
+        MatchResultInfo
+            Slice-level match metadata, including side identities.
+
+        Raises
+        ------
+        ObjectNotFoundError
+            If the slice has no match result.
+        """
 
         slice_id = _object_id(slice_)
         return _one(
@@ -176,13 +311,46 @@ class Match(_Display):
         )
 
     def load_result(self, slice_: Slice | SliceMetadata | str) -> MatchResult:
-        """Load and validate one slice's match arrays."""
+        """Load and validate one slice's match arrays.
+
+        Parameters
+        ----------
+        slice_
+            Slice object, metadata record, or ID.
+
+        Returns
+        -------
+        MatchResult
+            Aligned one-to-one cell-pair arrays.
+
+        Raises
+        ------
+        ObjectNotFoundError
+            If the slice has no match result.
+        InvalidExportError
+            If the stored arrays fail validation.
+        ClosedExportError
+            If the parent export is closed.
+        """
 
         self._export._ensure_open()
         return _load_match(self._export._storage, self.result_info(slice_))
 
     def load_results(self) -> MatchResults:
-        """Load and concatenate all match results."""
+        """Load and concatenate every available slice match.
+
+        Returns
+        -------
+        MatchResults
+            Aligned arrays with a slice ID for every matched pair.
+
+        Raises
+        ------
+        InvalidExportError
+            If any stored match fails validation.
+        ClosedExportError
+            If the parent export is closed.
+        """
 
         return MatchResults.from_results(
             tuple(self.load_result(item.slice_id) for item in self.result_index)
@@ -190,7 +358,15 @@ class Match(_Display):
 
 
 class ClassificationModule(_Display):
-    """Classification and cell-match module access."""
+    """Provide the classifications and cell matches included in an export.
+
+    Attributes
+    ----------
+    classifications
+        Selected classifications, one per included staining.
+    matches
+        Included staining-pair cell matches.
+    """
 
     def __init__(
         self,
@@ -213,7 +389,25 @@ class ClassificationModule(_Display):
     def for_staining(
         self, staining: Staining | StainingMetadata | str
     ) -> Classification:
-        """Get the selected classification for a staining."""
+        """Get the selected classification for a staining.
+
+        Parameters
+        ----------
+        staining
+            Staining object, metadata record, exact name, or ID.
+
+        Returns
+        -------
+        Classification
+            Selected classifier and available results.
+
+        Raises
+        ------
+        ObjectNotFoundError
+            If the export has no classification for the staining.
+        AmbiguousNameError
+            If the staining name is not unique.
+        """
 
         staining_id = (
             self._export.staining_by_name(staining).id
@@ -230,7 +424,23 @@ class ClassificationModule(_Display):
         )
 
     def match(self, pair_key: str) -> Match:
-        """Get one uniquely identified staining-pair match."""
+        """Get a staining-pair match by its exported key.
+
+        Parameters
+        ----------
+        pair_key
+            Key discovered from :attr:`matches`.
+
+        Returns
+        -------
+        Match
+            Match metadata and available slice results.
+
+        Raises
+        ------
+        ObjectNotFoundError
+            If the pair key is not present.
+        """
 
         return _one(
             tuple(item for item in self.matches if item.pair_key == pair_key),

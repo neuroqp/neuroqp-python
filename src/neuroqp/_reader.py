@@ -449,7 +449,9 @@ def open_export(
     Notes
     -----
     Use the returned object as a context manager so its storage is closed
-    promptly.
+    promptly. If a trusted ZIP exceeds the configured total uncompressed size,
+    extract it and pass the resulting directory instead; directory exports have
+    no aggregate byte limit.
     """
 
     export, report = _load(source, limits or ExportLimits())

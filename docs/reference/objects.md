@@ -1,5 +1,7 @@
 # Project objects
 
+`open_export()` creates these reader-bound objects. Use their lookup and navigation methods rather than constructing them directly.
+
 ::: neuroqp.ProjectExport
 
 ::: neuroqp.Animal

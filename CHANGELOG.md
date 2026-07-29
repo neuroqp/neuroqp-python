@@ -9,4 +9,5 @@ All notable changes to NeuroQP Python are recorded here.
 - Add lazy, pickle-disabled NumPy loading with scientific invariant checks.
 - Add human-readable and JSON `validate` and `inspect` CLI commands.
 - Add compact text and notebook representations for reader-bound objects and result containers.
+- Add streaming artifacts, temporary path access, and large strip-based TIFF workflows.
 - Add strict generated documentation, executable examples, and release automation.

@@ -17,7 +17,31 @@ Array = npt.NDArray[Any]
 
 @dataclass(frozen=True, repr=False)
 class ClassificationResult(_Display):
-    """Loaded classification arrays for one slice."""
+    """Store aligned classification arrays for one slice.
+
+    Attributes
+    ----------
+    metadata
+        Slice, staining, classifier, lineage, and timestamp metadata.
+    cell_ids
+        ``(N,)`` ``int32`` labels from the source detection mask.
+    centroids
+        ``(N, 2)`` ``float32`` pixel coordinates in ``(x, y)`` order. The
+        origin is the top-left of the source detection image or mask; x
+        increases right and y increases down.
+    probabilities
+        ``(N,)`` ``float32`` classifier probabilities.
+    is_positive
+        ``(N,)`` boolean mask. It is the authoritative exported classification
+        and equals ``probabilities >= threshold``.
+    threshold
+        Probability threshold used for this slice.
+
+    Notes
+    -----
+    Every row index refers to the same detected cell across all arrays.
+    Coordinates are image pixels, not micrometres or atlas coordinates.
+    """
 
     metadata: ClassificationResultInfo
     cell_ids: Array
@@ -28,6 +52,8 @@ class ClassificationResult(_Display):
 
     @property
     def positive_centroids(self) -> Array:
+        """Return ``centroids`` rows classified as positive."""
+
         return self.centroids[self.is_positive]
 
     def _display_items(self) -> tuple[tuple[str, object], ...]:
@@ -41,7 +67,28 @@ class ClassificationResult(_Display):
 
 @dataclass(frozen=True, repr=False)
 class ClassificationResults(_Display):
-    """Concatenated classification arrays across slices."""
+    """Store aligned classification arrays concatenated across slices.
+
+    Attributes
+    ----------
+    cell_ids
+        ``(N,)`` ``int32`` cell labels. Labels are unique only within a slice.
+    slice_ids
+        ``(N,)`` slice identifiers aligned with every other array.
+    centroids
+        ``(N, 2)`` ``float32`` source-image pixel coordinates in ``(x, y)`` order.
+    probabilities
+        ``(N,)`` ``float32`` classifier probabilities.
+    is_positive
+        ``(N,)`` authoritative boolean classification mask.
+    by_slice
+        Read-only mapping from slice ID to its :class:`ClassificationResult`.
+
+    Notes
+    -----
+    Use ``(slice_id, cell_id)`` as a cell key. Thresholds can differ by slice
+    and remain available through :attr:`by_slice`.
+    """
 
     cell_ids: Array
     slice_ids: Array
@@ -52,6 +99,8 @@ class ClassificationResults(_Display):
 
     @property
     def positive_centroids(self) -> Array:
+        """Return ``centroids`` rows classified as positive."""
+
         return self.centroids[self.is_positive]
 
     def _display_items(self) -> tuple[tuple[str, object], ...]:
@@ -91,7 +140,38 @@ class ClassificationResults(_Display):
 
 @dataclass(frozen=True, repr=False)
 class MatchResult(_Display):
-    """Loaded cell-match arrays for one slice."""
+    """Store aligned one-to-one cell matches for one slice.
+
+    Attributes
+    ----------
+    metadata
+        Slice metadata and the actual staining and detection run assigned to each side.
+    cell_ids_a, cell_ids_b
+        ``(M,)`` ``int32`` cell labels for sides A and B.
+    centroids_a, centroids_b
+        ``(M, 2)`` ``float32`` source-mask pixel coordinates in ``(x, y)``
+        order for the corresponding side.
+    intersection_area
+        ``(M,)`` ``int32`` overlap area in pixels.
+    area_a, area_b
+        ``(M,)`` ``int32`` cell-mask areas in pixels for each side.
+    overlap_fraction_a, overlap_fraction_b
+        Intersection area divided by the corresponding side's area.
+    overlap_fraction_min
+        Smaller of the two side-specific overlap fractions.
+    iou
+        Intersection over union: ``intersection / (area_a + area_b - intersection)``.
+    algorithm_version
+        Matching algorithm version.
+    overlap_threshold
+        Minimum ``overlap_fraction_min`` retained by the matching algorithm.
+
+    Notes
+    -----
+    Every row index describes one matched pair. Read side identities from
+    ``metadata.side_a`` and ``metadata.side_b``; do not infer them from the
+    pair key.
+    """
 
     metadata: MatchResultInfo
     cell_ids_a: Array
@@ -119,7 +199,33 @@ class MatchResult(_Display):
 
 @dataclass(frozen=True, repr=False)
 class MatchResults(_Display):
-    """Concatenated match arrays across slices."""
+    """Store aligned cell-match arrays concatenated across slices.
+
+    Attributes
+    ----------
+    slice_ids
+        ``(M,)`` slice identifiers aligned with every other array.
+    cell_ids_a, cell_ids_b
+        ``(M,)`` ``int32`` cell labels for sides A and B. Labels are unique
+        only within a slice.
+    centroids_a, centroids_b
+        ``(M, 2)`` ``float32`` source-mask pixel coordinates in ``(x, y)`` order.
+    intersection_area, area_a, area_b
+        ``(M,)`` pixel-area arrays.
+    overlap_fraction_a, overlap_fraction_b
+        ``(M,)`` side-specific intersection fractions.
+    overlap_fraction_min
+        ``(M,)`` smaller side-specific overlap fraction.
+    iou
+        ``(M,)`` intersection-over-union values.
+    by_slice
+        Read-only mapping from slice ID to its :class:`MatchResult`.
+
+    Notes
+    -----
+    Use ``(slice_id, cell_id)`` to identify cells. Side identities and
+    thresholds remain available through :attr:`by_slice`.
+    """
 
     slice_ids: Array
     cell_ids_a: Array

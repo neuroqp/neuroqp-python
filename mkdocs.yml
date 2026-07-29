@@ -48,7 +48,7 @@ plugins:
             filters:
               - "!^_"
             heading_level: 2
-            merge_init_into_class: true
+            merge_init_into_class: false
             members_order: source
             separate_signature: true
             show_bases: false
@@ -101,6 +101,7 @@ nav:
       - Object model: concepts/object-model.md
   - Guides:
       - Navigate a project: guides/navigation.md
+      - Images and masks: guides/images.md
       - Validate and inspect: guides/validation-cli.md
       - Classification and matches: guides/classification.md
       - Low-level access: guides/low-level.md

@@ -13,4 +13,5 @@ build/
 dist/
 htmlcov/
 site/
+docs/examples/neuroqp-example-v2.zip
 plans/

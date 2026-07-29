@@ -5,4 +5,4 @@ Use these notebooks as starting points for your own NeuroQP analysis. They work 
 - [Open and navigate an export](open-and-navigate.ipynb)
 - [Validate an export](validate-export.ipynb)
 
-Open a notebook in the documentation to read it, or use its download control to run and adapt the source locally.
+Open a notebook in the documentation to read it, or use its download control to run and adapt the source locally. A downloaded notebook stores the small synthetic export beside itself the first time it runs. To use your own data, change `PROJECT_FILE` to the path of your project export.

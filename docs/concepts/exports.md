@@ -14,6 +14,21 @@ with open_export("project.zip") as export:
     # No result NPZ has been loaded yet.
 ```
 
+Artifact streams read from the source incrementally. Opening an image from an extracted export does not copy it into memory; opening one from a ZIP decompresses bytes as they are read.
+
+## Large exports
+
+Direct ZIP access is limited to 4 GiB of declared uncompressed members by default. This conservative boundary prevents an apparently small or untrusted archive from expanding without a practical limit.
+
+For a trusted NeuroQP ZIP above that limit, extract it with your normal archive tool and pass the resulting folder to `open_export()`:
+
+```python
+with open_export("path/to/extracted-project-export") as export:
+    print(export)
+```
+
+Extracted directories have no aggregate byte limit because their files already occupy visible disk space. Path containment, symbolic-link, member-count, metadata-size, and NumPy pickle protections remain active. Do not extract an archive rejected for an unsafe path, unsafe link, or suspicious compression ratio.
+
 ## Optional modules
 
 The v2 format can contain three modules:

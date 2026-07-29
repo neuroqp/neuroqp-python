@@ -1,6 +1,6 @@
 # Object model
 
-`ProjectExport` is the root of the reader-bound object graph:
+`ProjectExport` is the starting point for navigating a project:
 
 ```text
 ProjectExport
@@ -16,23 +16,73 @@ ProjectExport
                           └── matches → Match
 ```
 
-## Reader-bound objects
+## Keep the export open while navigating
 
-Project objects offer navigation and raw-file access. They check that their export remains open:
+Use `open_export()` as a context manager. Objects such as animals, slices, images, registrations, classifications, matches, and file artifacts use the open ZIP or directory to follow relationships and load files.
 
 ```python
-with open_export("project.zip") as export:
-    slice_ = export.slices[0]
-    metadata = slice_.metadata
+from pathlib import Path
 
-print(metadata)  # Safe: immutable Pydantic record.
-print(slice_.images)  # Raises ClosedExportError.
+from neuroqp import open_export
+
+PROJECT_FILE = Path("path/to/project-export.zip")
+
+with open_export(PROJECT_FILE) as export:
+    animal = export.animals[0]
+    slice_ = animal.slices[0]
+    image = slice_.images[0]
+    print(animal.name, slice_.name, image.staining.name)
 ```
 
-## Metadata records
+When the `with` block ends, the export closes automatically. Further navigation or file loading raises `ClosedExportError`:
 
-Metadata models normalize wire names to Python names, timestamps to timezone-aware UTC `datetime` values, and collections to immutable tuples. Unknown additive fields remain available through Pydantic’s extra-field support.
+```python
+from neuroqp import ClosedExportError
 
-## Result containers
+try:
+    print(slice_.images)
+except ClosedExportError:
+    print("The export is already closed.")
+```
 
-Classification and match loaders return frozen dataclasses containing NumPy arrays. Their compact text representation is useful in a REPL, while notebooks receive a small HTML summary.
+## Data you can keep after closing
+
+Copy or load the information needed for later analysis while the export is open:
+
+| Safe after closing | Examples |
+| --- | --- |
+| Metadata records | `slice_.metadata`, `image.metadata`, `export.project` |
+| Plain Python values | IDs, names, dictionaries, lists, numbers |
+| Loaded scientific results | `classification.load_result(...)`, `classification.load_results()` |
+| Loaded image data | Encoded bytes, a decoded NumPy array, or a separately stored memmap |
+
+```python
+with open_export(PROJECT_FILE) as export:
+    slice_ = export.slices[0]
+    slice_metadata = slice_.metadata
+    project_metadata = export.project
+
+    image = slice_.images[0]
+    image_metadata = image.metadata
+    with image.open() as stream:
+        image_bytes = stream.read()
+
+print(project_metadata.name)
+print(slice_metadata.name, image_metadata.original_filename)
+print(len(image_bytes))
+```
+
+Metadata records are immutable snapshots. They remain safe because they do not need to read another export member. Loaded result containers own their NumPy arrays, so those arrays also remain available after closing.
+
+Streams returned by `open()` and paths yielded by `as_path()` are storage-backed resources. Open and consume them inside the parent export context. For ZIP exports, an `as_path()` path is a temporary copy and disappears when its own context exits. A memmap remains usable only while its separately decoded backing file exists.
+
+## Data that still needs the open export
+
+Keep the context open for:
+
+- moving between animals, slices, stainings, images, registrations, classifications, and matches;
+- calling `image.open()`, `image.as_path()`, `artifact.open()`, `artifact.as_path()`, or `export.member()`;
+- loading classification or match arrays that have not yet been read;
+- listing raw archive members.
+
+For a long notebook analysis, it is fine to keep one `with open_export(...)` block around the cells that navigate and load data. For repeated functions, open the export inside the function or pass an already-open export and call the function before the context closes.

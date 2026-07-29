@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Annotated, Any, Literal
 
 from pydantic import (
@@ -13,20 +13,19 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
-    field_validator,
 )
 
 
 def _parse_datetime(value: Any) -> Any:
     if isinstance(value, (int, float)):
-        return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
+        return datetime.fromtimestamp(value / 1000, tz=UTC)
     return value
 
 
 def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 NormalizedDatetime = Annotated[
@@ -42,7 +41,7 @@ class Record(BaseModel):
     model_config = ConfigDict(extra="allow", frozen=True, populate_by_name=True)
 
 
-class Module(str, Enum):
+class Module(StrEnum):
     """Optional v2 export modules."""
 
     DATA = "data"
@@ -67,7 +66,25 @@ class AtlasSummary(Record):
 
 
 class Atlas(AtlasSummary):
-    """Normalized exported atlas metadata."""
+    """Describe the atlas selected for the exported project.
+
+    Attributes
+    ----------
+    id
+        Opaque atlas identifier.
+    key
+        Stable atlas family key.
+    version
+        Atlas data version.
+    name
+        Human-readable atlas name.
+    species
+        Species described by the atlas.
+    plane
+        Sectioning plane, such as ``"coronal"``.
+    specification
+        Additive atlas specification supplied by NeuroQP.
+    """
 
     species: str
     plane: str
@@ -83,7 +100,29 @@ class ManifestProject(Record):
 
 
 class Manifest(Record):
-    """Root v2 export manifest."""
+    """Describe the identity and included content of a v2 export.
+
+    Attributes
+    ----------
+    export_version
+        Export format version. It is ``"v2"`` for this model.
+    export_id
+        Opaque identifier for this export snapshot.
+    exported_at
+        Snapshot creation time as a timezone-aware UTC datetime.
+    project
+        Project identifier, slug, and name recorded by the exporter.
+    project_metadata_path
+        Archive path to the export metadata record.
+    included_modules
+        Modules actually included in the export.
+    atlas
+        Atlas identity when the project has an atlas, otherwise ``None``.
+    selected_classifier_head_ids_by_staining
+        Mapping from staining IDs to selected classifier IDs.
+    linked_training_run_ids_by_staining
+        Mapping from staining IDs to linked training-run IDs or ``None``.
+    """
 
     export_version: Literal["v2"] = Field(alias="exportVersion")
     export_id: str = Field(alias="exportId")
@@ -101,7 +140,25 @@ class Manifest(Record):
 
 
 class ExportMetadata(Record):
-    """Metadata stored in ``project/export.json``."""
+    """Describe how and when an export snapshot was requested.
+
+    Attributes
+    ----------
+    export_version
+        Export format version.
+    exported_at
+        Snapshot creation time as a timezone-aware UTC datetime.
+    export_id
+        Opaque identifier matching :attr:`Manifest.export_id`.
+    project_id
+        Opaque project identifier.
+    expires_at
+        Expiry time of the source export request.
+    requested_modules
+        Modules requested when the export was created.
+    selected_classifier_head_ids_by_staining
+        Mapping from staining IDs to selected classifier IDs.
+    """
 
     export_version: Literal["v2"] = Field(alias="exportVersion")
     exported_at: NormalizedDatetime = Field(alias="exportedAt")
@@ -115,7 +172,27 @@ class ExportMetadata(Record):
 
 
 class ProjectMetadata(Record):
-    """Project imaging metadata."""
+    """Describe the project's image scales and annotations.
+
+    Attributes
+    ----------
+    name
+        Human-readable project name.
+    type
+        Project imaging type recorded by NeuroQP.
+    atlas_id
+        Selected atlas identifier, or ``None``.
+    whole_slice_label
+        Display label for whole-slice images.
+    whole_slice_microns_per_pixel
+        Whole-slice image pixel size in micrometres per pixel.
+    detail_image_label
+        Display label for detail images.
+    detail_microns_per_pixel
+        Detail-image pixel size in micrometres per pixel.
+    comments
+        Project comments, or ``None``.
+    """
 
     name: str
     type: str
@@ -128,14 +205,30 @@ class ProjectMetadata(Record):
 
 
 class Staining(Record):
-    """Staining identity."""
+    """Store the identifier and human-readable name of one staining."""
 
     id: str = Field(alias="_id")
     name: str
 
 
 class Animal(Record):
-    """Animal metadata."""
+    """Describe one experimental animal.
+
+    Attributes
+    ----------
+    id
+        Opaque animal identifier.
+    name
+        Human-readable animal name.
+    comments
+        Animal comments, or ``None``.
+    sex
+        Recorded sex value, or ``None``.
+    group
+        Resolved experimental group name, or ``None``.
+    condition
+        Resolved experimental condition name, or ``None``.
+    """
 
     id: str = Field(alias="_id")
     name: str
@@ -146,7 +239,19 @@ class Animal(Record):
 
 
 class Slice(Record):
-    """Slice metadata."""
+    """Describe one tissue slice.
+
+    Attributes
+    ----------
+    id
+        Opaque slice identifier.
+    animal_id
+        Identifier of the parent animal.
+    slice_coordinate_mm
+        Anterior-posterior coordinate in millimetres.
+    name
+        Human-readable slice name, or ``None``.
+    """
 
     id: str = Field(alias="_id")
     animal_id: str = Field(alias="animalId")
@@ -161,7 +266,17 @@ class Slice(Record):
 
 
 class BrainRegion(Record):
-    """Selected atlas brain region."""
+    """Identify an atlas brain region selected in the project.
+
+    Attributes
+    ----------
+    structure_id
+        Numeric structure identifier assigned by the atlas.
+    name
+        Full region name.
+    acronym
+        Atlas region acronym.
+    """
 
     structure_id: int = Field(alias="structureId")
     name: str
@@ -169,7 +284,25 @@ class BrainRegion(Record):
 
 
 class Image(Record):
-    """Canonical v2 image metadata."""
+    """Describe one image stored in an export.
+
+    Attributes
+    ----------
+    id
+        Opaque image identifier.
+    archive_path
+        Root-relative path of the image inside the export.
+    height, width
+        Image dimensions in pixels.
+    staining_id
+        Identifier of the image staining.
+    slice_id
+        Identifier of the parent slice.
+    magnification
+        Magnification label recorded by NeuroQP.
+    original_filename
+        Filename recorded when the image was uploaded.
+    """
 
     id: str = Field(alias="imageId")
     archive_path: str = Field(alias="archivePath")
@@ -202,7 +335,17 @@ class RegistrationLandmark(Record):
 
 
 class AtlasRegistration(Record):
-    """Normalized atlas registration for one slice."""
+    """Describe the atlas landmarks for one slice.
+
+    Attributes
+    ----------
+    slice_id
+        Identifier of the registered slice.
+    slice_coordinate_mm
+        Registered anterior-posterior coordinate in millimetres.
+    landmarks
+        Corresponding image-pixel and atlas-plane points.
+    """
 
     slice_id: str
     slice_coordinate_mm: float
@@ -210,186 +353,71 @@ class AtlasRegistration(Record):
 
 
 class DetailTransform(Record):
-    """Detail-image footprint in whole-slice pixel coordinates."""
+    """Describe a detail image's footprint in whole-slice pixel coordinates.
+
+    Attributes
+    ----------
+    slice_id
+        Identifier of the transformed slice.
+    corners
+        Ordered detail-image corners expressed as whole-slice ``(x, y)`` pixels.
+    """
 
     slice_id: str
     corners: tuple[Point, ...]
 
 
-class SliceExclusion(Record):
-    """A documented reason why one slice has no result."""
+from ._classification_models import (  # noqa: E402
+    ClassificationResultInfo,
+    ClassifierMetadata,
+    DetectionSource,
+    ExportLimits,
+    IndependentDetectionSource,
+    MatchResultInfo,
+    MatchSide,
+    SampleCounts,
+    SharedDetectionSource,
+    SliceExclusion,
+    TrainingRun,
+    TrainingSample,
+    TrainingSummary,
+    ValidationIssue,
+    ValidationReport,
+)
 
-    slice_id: str = Field(alias="sliceId")
-    slice_name: str | None = Field(alias="sliceName")
-    reason_code: str = Field(alias="reasonCode")
-    reason: str
-
-
-class ClassifierMetadata(Record):
-    """Metadata for an exported classifier."""
-
-    id: str
-    display_name: str = Field(alias="displayName")
-    version: int
-    head_type: str = Field(alias="headType")
-    source: Literal["trained", "platform_import", "project_import"]
-    created_at: NormalizedDatetime = Field(alias="createdAt")
-    comments: str | None
-    staining: EntityReference
-    training_run_id: str | None = Field(alias="trainingRunId")
-    evaluation_metrics: dict[str, Any] = Field(alias="evaluationMetrics")
-
-
-class SampleCounts(Record):
-    """On/off sample counts."""
-
-    on: int
-    off: int
-    total: int
-    slice_count: int | None = Field(default=None, alias="sliceCount")
-
-
-class TrainingRun(Record):
-    """Exported classifier training-run summary."""
-
-    id: str
-    status: str
-    training_duration_ms: float = Field(alias="trainingDurationMs")
-    final_metrics: dict[str, float | int] = Field(alias="finalMetrics")
-    recorded_sample_counts: SampleCounts = Field(alias="recordedSampleCounts")
-    histories: dict[str, tuple[float, ...]]
-    coverage: dict[str, Any] | None = None
-    confidence: dict[str, Any] | None = None
-    convergence: dict[str, Any] | None = None
-
-
-class TrainingSummary(Record):
-    """Training data and run summary for one staining."""
-
-    staining: EntityReference
-    sample_basis: Literal["current_at_export"] = Field(alias="sampleBasis")
-    current_samples: SampleCounts = Field(alias="currentSamples")
-    training_run: TrainingRun | None = Field(alias="trainingRun")
-
-
-class TrainingSample(Record):
-    """One exported classifier training sample."""
-
-    slice_id: str = Field(alias="sliceId")
-    slice_name: str | None = Field(alias="sliceName")
-    staining_id: str = Field(alias="stainingId")
-    staining_name: str = Field(alias="stainingName")
-    cell_id: int | None = Field(alias="cellId")
-    cell_detection_run_id: str | None = Field(default=None, alias="cellDetectionRunId")
-    label: Literal["on", "off"]
-    created_at: NormalizedDatetime = Field(alias="createdAt")
-
-
-class SharedDetectionSource(Record):
-    """Classification lineage using a shared cell-count detection."""
-
-    kind: Literal["shared_detection"] = "shared_detection"
-    cell_count_id: str = Field(alias="cellCountId")
-
-
-class IndependentDetectionSource(Record):
-    """Classification lineage using a staining-specific detection."""
-
-    kind: Literal["independent_detection"] = "independent_detection"
-    cell_detection_run_id: str = Field(alias="cellDetectionRunId")
-
-
-DetectionSource = Annotated[
-    SharedDetectionSource | IndependentDetectionSource,
-    Field(discriminator="kind"),
+__all__ = [
+    "Animal",
+    "Atlas",
+    "AtlasRegistration",
+    "AtlasSummary",
+    "BrainRegion",
+    "ClassificationResultInfo",
+    "ClassifierMetadata",
+    "DetailTransform",
+    "DetectionSource",
+    "EntityReference",
+    "ExportLimits",
+    "ExportMetadata",
+    "Image",
+    "IndependentDetectionSource",
+    "Manifest",
+    "ManifestProject",
+    "MatchResultInfo",
+    "MatchSide",
+    "Module",
+    "NormalizedDatetime",
+    "Point",
+    "ProjectMetadata",
+    "Record",
+    "RegistrationLandmark",
+    "SampleCounts",
+    "SharedDetectionSource",
+    "Slice",
+    "SliceExclusion",
+    "Staining",
+    "TrainingRun",
+    "TrainingSample",
+    "TrainingSummary",
+    "ValidationIssue",
+    "ValidationReport",
 ]
-
-
-class ClassificationResultInfo(Record):
-    """Index metadata for one classification result."""
-
-    slice_id: str = Field(alias="sliceId")
-    slice_name: str | None = Field(alias="sliceName")
-    staining_id: str = Field(alias="stainingId")
-    classifier_id: str = Field(alias="classifierId")
-    source: DetectionSource = Field(alias="sourceLineage")
-    on_count: int | None = Field(alias="onCount")
-    off_count: int | None = Field(alias="offCount")
-    threshold: float | None
-    timestamp: NormalizedDatetime
-    npz_path: str = Field(alias="npzPath")
-
-
-class MatchSide(Record):
-    """One side of an exported cell match."""
-
-    staining: EntityReference
-    detection_run_id: str = Field(alias="detectionRunId")
-    unmatched_count: int | None = Field(alias="unmatchedCount")
-
-
-class MatchResultInfo(Record):
-    """Index metadata for one per-slice match result."""
-
-    slice_id: str = Field(alias="sliceId")
-    slice_name: str | None = Field(alias="sliceName")
-    side_a: MatchSide = Field(alias="sideA")
-    side_b: MatchSide = Field(alias="sideB")
-    algorithm_version: str = Field(alias="algorithmVersion")
-    overlap_threshold: float = Field(alias="overlapThreshold")
-    timestamp: NormalizedDatetime
-    candidate_pair_count: int | None = Field(alias="candidatePairCount")
-    matched_count: int | None = Field(alias="matchedCount")
-    npz_path: str = Field(alias="npzPath")
-
-
-class ValidationIssue(Record):
-    """One actionable export validation issue."""
-
-    path: str
-    code: str
-    message: str
-    field: str | None = None
-
-
-class ValidationReport(Record):
-    """Aggregate export validation result."""
-
-    issues: tuple[ValidationIssue, ...] = ()
-
-    @property
-    def valid(self) -> bool:
-        """Whether the export passed validation."""
-
-        return not self.issues
-
-
-class ExportLimits(Record):
-    """Configurable resource limits; path and pickle protections remain mandatory."""
-
-    max_members: int = 10_000
-    max_total_uncompressed_bytes: int = 4 * 1024**3
-    max_metadata_bytes: int = 8 * 1024**2
-    max_compression_ratio: float = 1_000
-
-    @field_validator(
-        "max_members",
-        "max_total_uncompressed_bytes",
-        "max_metadata_bytes",
-    )
-    @classmethod
-    def positive_integer(cls, value: int) -> int:
-        """Require useful positive limits."""
-
-        if value <= 0:
-            raise ValueError("limit must be positive")
-        return value
-
-    @field_validator("max_compression_ratio")
-    @classmethod
-    def positive_ratio(cls, value: float) -> float:
-        """Require a useful positive ratio."""
-
-        if value <= 0:
-            raise ValueError("limit must be positive")
-        return value

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
-from typing import Any, TypeVar
+from typing import Any
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
@@ -20,8 +20,6 @@ from .models import (
     Staining,
     ValidationIssue,
 )
-
-ModelT = TypeVar("ModelT", bound=BaseModel)
 
 
 def _issue(
@@ -56,7 +54,7 @@ def _read_json(
     return None
 
 
-def _read_jsonl(
+def _read_jsonl[ModelT: BaseModel](
     model: type[ModelT],
     storage: Storage,
     path: str,
@@ -93,7 +91,7 @@ def _read_jsonl(
     return tuple(records)
 
 
-def _parse_model(
+def _parse_model[ModelT: BaseModel](
     model: type[ModelT],
     value: Any | None,
     path: str,
@@ -110,7 +108,7 @@ def _parse_model(
         return None
 
 
-def _parse_list(
+def _parse_list[ModelT: BaseModel](
     model: type[ModelT],
     value: Any | None,
     path: str,

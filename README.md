@@ -1,25 +1,33 @@
 # NeuroQP Python
 
-NeuroQP Python is the Python SDK and command-line interface for reading, validating, and working with NeuroQP project exports.
+NeuroQP Python lets neuroscientists open a NeuroQP project export, navigate its animals, slices, stainings, images, and registrations, and analyze classification or cell-match results with Python and NumPy.
 
-> **Status:** `0.1.0.dev0` is an unpublished development version. It supports canonical v2 export metadata, images and artifacts, atlas registration, classifier results, training samples, and cell matches.
+> **Status:** `0.1.0.dev0` is an unpublished release candidate for NeuroQP export format v2.
 
 ## Installation
 
-The package has not been published to PyPI yet. To use the current development version from a source checkout:
+Create and activate a virtual environment for your analysis:
 
 ```bash
-uv sync
+python -m venv .venv
+source .venv/bin/activate
 ```
+
+Install the current release-candidate snapshot:
+
+```bash
+python -m pip install "https://github.com/neuroqp/neuroqp-python/archive/bc913cd.zip"
+```
+
+See the [installation guide](docs/getting-started/installation.md) for Windows instructions, JupyterLab setup, and the future PyPI installation command.
 
 ## Getting started
 
 Validate or inspect an exported NeuroQP project:
 
 ```bash
-uv run neuroqp validate path/to/neuroqp_export.zip
-uv run neuroqp inspect path/to/neuroqp_export.zip
-uv run neuroqp inspect path/to/neuroqp_export.zip --json
+neuroqp validate path/to/neuroqp_export.zip
+neuroqp inspect path/to/neuroqp_export.zip
 ```
 
 Open an export from Python:
@@ -28,19 +36,19 @@ Open an export from Python:
 from neuroqp import open_export
 
 with open_export("neuroqp_export.zip") as export:
-    print(export.name)
+    print(export)
 
     animal = export.animal_by_name("Mouse 1")
     for slice_ in animal.slices:
         print(slice_.name, slice_.slice_coordinate_mm)
 
     if export.classification is not None:
-        staining = export.staining_by_name("NeuN")
-        results = export.classification.for_staining(staining).load_results()
+        classification = export.classification.for_staining("NeuN")
+        results = classification.load_results()
         print(results.positive_centroids)
 ```
 
-ZIP archives and extracted export directories are both supported.
+ZIP archives and extracted export directories are both supported. Continue with the [quickstart](docs/getting-started/quickstart.md), [analysis guide](docs/guides/classification.md), or [example notebooks](docs/examples/index.md).
 
 ## Project links
 
@@ -49,30 +57,19 @@ ZIP archives and extracted export directories are both supported.
 - [Versions](https://github.com/neuroqp/neuroqp-python/tags)
 - [Releases](https://github.com/neuroqp/neuroqp-python/releases)
 - [Changelog](CHANGELOG.md)
+- [Questions and support](https://github.com/neuroqp/neuroqp-python/discussions)
 - [Issue tracker](https://github.com/neuroqp/neuroqp-python/issues)
-- [Source code](https://github.com/neuroqp/neuroqp-python)
 
 The public versioned documentation URL will be added after the first release deployment.
 
-## Documentation
-
-Build and serve the complete documentation locally:
-
-```bash
-uv sync --group docs
-uv run mkdocs serve
-```
-
-Open <http://127.0.0.1:8000>. The server rebuilds when documentation or docstrings change. Use `uv run mkdocs build --strict` for the same strict build used in CI.
-
 ## Supported versions
 
-- Python 3.10 through 3.14
+- Python 3.12 through 3.14
 - NeuroQP project export format v2
 
-## Development
+## Contributing
 
-See [AGENTS.md](AGENTS.md) for the minimal development commands and repository rules.
+See [CONTRIBUTING.md](CONTRIBUTING.md) if you want to work on the package itself.
 
 ## License
 
