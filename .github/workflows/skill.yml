@@ -1,0 +1,53 @@
+name: Publish agent skill
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "skills/**"
+      - "scripts/build_skill_release.py"
+      - ".github/workflows/skill.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: docs-site-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish compatible skill update
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - run: uv sync --locked --group dev
+      - run: uv run pytest
+      - name: Publish skill bundle
+        run: |
+          if ! git ls-remote --exit-code --heads origin docs-site; then
+            echo "docs-site does not exist yet; the first package release will publish the skill."
+            exit 0
+          fi
+
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git fetch origin docs-site
+
+          DOCS_WORKTREE="$RUNNER_TEMP/neuroqp-python-docs"
+          git worktree add -B docs-site "$DOCS_WORKTREE" origin/docs-site
+          uv run python scripts/build_skill_release.py \
+            --output-dir "$DOCS_WORKTREE/skill" \
+            --base-manifest "$DOCS_WORKTREE/skill/manifest.json"
+          git -C "$DOCS_WORKTREE" add skill
+          if ! git -C "$DOCS_WORKTREE" diff --cached --quiet; then
+            git -C "$DOCS_WORKTREE" commit -m "Update NeuroQP Python agent skill"
+            git -C "$DOCS_WORKTREE" push origin docs-site
+          fi

@@ -28,6 +28,7 @@ from .models import Staining as StainingMetadata
 if TYPE_CHECKING:
     from ._project import ProjectExport
 
+
 def _object_id(value: object) -> str:
     if isinstance(value, str):
         return value

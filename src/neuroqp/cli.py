@@ -4,11 +4,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 
 from ._project import ProjectExport
 from ._reader import open_export, validate_export
+from ._skill import (
+    SkillError,
+    _as_agent,
+    _as_scope,
+    install_skill,
+    update_skill,
+)
 from .errors import InvalidExportError
 from .models import Module, ValidationReport
 
@@ -23,6 +31,27 @@ def _parser() -> argparse.ArgumentParser:
         command = subparsers.add_parser(name, help=help_text)
         command.add_argument("export", type=Path)
         command.add_argument("--json", action="store_true", dest="as_json")
+
+    skill = subparsers.add_parser(
+        "skill",
+        help="install or update the NeuroQP agent skill",
+    )
+    skill_commands = skill.add_subparsers(dest="skill_command", required=True)
+    for name, help_text in (
+        ("install", "install the bundled agent skill"),
+        ("update", "download the newest compatible agent skill"),
+    ):
+        command = skill_commands.add_parser(name, help=help_text)
+        command.add_argument(
+            "--agent",
+            choices=("codex", "claude", "all"),
+            required=True,
+        )
+        command.add_argument(
+            "--scope",
+            choices=("project", "user"),
+            default="project",
+        )
     return parser
 
 
@@ -183,6 +212,31 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run the NeuroQP CLI."""
 
     args = _parser().parse_args(argv)
+    if args.command == "skill":
+        try:
+            if args.skill_command == "install":
+                changed = install_skill(
+                    _as_agent(args.agent),
+                    _as_scope(args.scope),
+                )
+            else:
+                changed = update_skill(
+                    _as_agent(args.agent),
+                    _as_scope(args.scope),
+                )
+        except SkillError as error:
+            print(
+                f"Cannot {args.skill_command} NeuroQP skill: {error}", file=sys.stderr
+            )
+            return 1
+        if changed:
+            action = "Installed" if args.skill_command == "install" else "Updated"
+            for path in changed:
+                print(f"{action} NeuroQP skill: {path}")
+        else:
+            print("NeuroQP skill is already up to date.")
+        return 0
+
     if args.command == "validate":
         report = validate_export(args.export)
         payload = _report_payload(report)

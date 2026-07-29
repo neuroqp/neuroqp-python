@@ -58,11 +58,15 @@ docs = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/neuroqp"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"skills/neuroqp-python" = "neuroqp/_skill_bundle/neuroqp-python"
+
 [tool.hatch.build.targets.sdist]
 include = [
   "/src",
   "/tests",
   "/docs",
+  "/skills",
   "/scripts",
   "/CHANGELOG.md",
   "/CODE_OF_CONDUCT.md",

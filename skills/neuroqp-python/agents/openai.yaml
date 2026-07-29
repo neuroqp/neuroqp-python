@@ -1,0 +1,4 @@
+interface:
+  display_name: "NeuroQP Python"
+  short_description: "Build neuroscience analyses from NeuroQP exports"
+  default_prompt: "Use $neuroqp-python to help me analyze a NeuroQP project export."

@@ -63,6 +63,14 @@ jobs:
       - run: uv pip install --python .package-venv/bin/python dist/*.whl
       - run: .package-venv/bin/python -c "import neuroqp; assert neuroqp.__version__ == '0.1.0.dev0'"
       - run: .package-venv/bin/neuroqp --help
+      - run: |
+          mkdir "$RUNNER_TEMP/skill-install"
+          cd "$RUNNER_TEMP/skill-install"
+          "$GITHUB_WORKSPACE/.package-venv/bin/neuroqp" skill install --agent all
+          test -s .agents/skills/neuroqp-python/SKILL.md
+          test -s .claude/skills/neuroqp-python/SKILL.md
+      - run: uv run python scripts/build_skill_release.py --output-dir "$RUNNER_TEMP/skill-release"
+      - run: test -s "$RUNNER_TEMP/skill-release/manifest.json"
 
   documentation:
     name: documentation

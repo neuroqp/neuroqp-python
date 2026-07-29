@@ -115,6 +115,9 @@ jobs:
       - build
       - publish
     runs-on: ubuntu-latest
+    concurrency:
+      group: docs-site-publish
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
@@ -129,6 +132,7 @@ jobs:
       - name: Deploy immutable minor documentation
         env:
           MINOR: ${{ needs.build.outputs.minor }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
@@ -139,8 +143,12 @@ jobs:
           git worktree add "$DOCS_WORKTREE" docs-site
           cp "$DOCS_WORKTREE/$MINOR/llms.txt" "$DOCS_WORKTREE/llms.txt"
           cp "$DOCS_WORKTREE/$MINOR/llms-full.txt" "$DOCS_WORKTREE/llms-full.txt"
-          git -C "$DOCS_WORKTREE" add llms.txt llms-full.txt
+          uv run python scripts/build_skill_release.py \
+            --output-dir "$DOCS_WORKTREE/skill" \
+            --base-manifest "$DOCS_WORKTREE/skill/manifest.json" \
+            --package-version "$VERSION"
+          git -C "$DOCS_WORKTREE" add llms.txt llms-full.txt skill
           if ! git -C "$DOCS_WORKTREE" diff --cached --quiet; then
-            git -C "$DOCS_WORKTREE" commit -m "Update AI-readable documentation for $MINOR"
+            git -C "$DOCS_WORKTREE" commit -m "Update AI resources for $MINOR"
           fi
           git -C "$DOCS_WORKTREE" push origin docs-site
