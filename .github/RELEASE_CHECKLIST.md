@@ -30,9 +30,9 @@ This checklist records reproducible phase 3 verification. Do not include private
 
 ## External repository checks
 
-- [ ] Required `main` protections and CI checks are enabled.
-- [ ] Discussions and private vulnerability reporting are enabled.
-- [ ] Dependabot, secret scanning, push protection, and CodeQL are enabled.
+- [x] Required `main` protections and CI checks are enabled.
+- [x] Discussions and private vulnerability reporting are enabled.
+- [x] Dependabot, secret scanning, push protection, and CodeQL are enabled.
 - [ ] PyPI Trusted Publishing is configured for the `pypi` environment.
 - [ ] Vercel production deploys only the `docs-site` branch.
 
@@ -40,4 +40,4 @@ This checklist records reproducible phase 3 verification. Do not include private
 
 - [x] The candidate remains `0.1.0.dev0`.
 - [x] PyPI contains no NeuroQP Python release from this phase.
-- [ ] The release-candidate PR is reviewed before it is squash-merged to `main`.
+- [x] The release-candidate PR is reviewed before it is squash-merged to `main`.
