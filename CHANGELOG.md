@@ -4,6 +4,13 @@ All notable changes to NeuroQP Python are recorded here.
 
 ## 0.1.1 — Unreleased
 
+- Render the documentation changelog from `CHANGELOG.md` so release status cannot drift.
+- Require uv 0.13.4 or newer for development and CI (GHSA-hq85-5cpj-mr62).
+- Update development and documentation dependencies to fix security advisories in certifi, urllib3, virtualenv, and tornado.
+- Update the GitHub Actions used by CI and releases, and build published artifacts without the uv cache.
+- Let the release workflow create its support labels.
+- Require hatchling 1.27 or newer, below 2, to build the package.
+
 ## 0.1.0 — 2026-07-29
 
 - Add safe reading and aggregate validation for NeuroQP v2 ZIP archives and extracted directories.
