@@ -23,7 +23,8 @@ jobs:
         with:
           version: ">=0.13.4"
           python-version: "3.14"
-          enable-cache: true
+          # Publication jobs skip the uv cache to rule out cache poisoning.
+          enable-cache: false
       - run: uv sync --locked --group dev --group docs
       - name: Verify stable version and tag
         id: version
@@ -130,7 +131,8 @@ jobs:
         with:
           version: ">=0.13.4"
           python-version: "3.14"
-          enable-cache: true
+          # Publication jobs skip the uv cache to rule out cache poisoning.
+          enable-cache: false
       - run: uv sync --locked --group docs
       - name: Deploy immutable minor documentation
         env:
