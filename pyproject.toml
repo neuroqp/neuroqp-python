@@ -55,6 +55,10 @@ docs = [
   "mkdocstrings[python]>=0.29",
 ]
 
+[tool.uv]
+# tox-uv pulls in uv; keep it at or above the GHSA-hq85-5cpj-mr62 fix.
+constraint-dependencies = ["uv>=0.13.4"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/neuroqp"]
 

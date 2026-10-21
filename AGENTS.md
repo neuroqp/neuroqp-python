@@ -4,6 +4,7 @@ NeuroQP Python is the Python SDK and CLI for reading and validating NeuroQP proj
 
 ## Development
 
+- Use uv 0.13.4 or newer; see `CONTRIBUTING.md`.
 - Sync: `uv sync`
 - Test: `uv run pytest`
 - Test all Python versions: `uv run tox`
