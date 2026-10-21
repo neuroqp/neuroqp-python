@@ -1,0 +1,72 @@
+name: Dependency audit
+
+# Audits every package in uv.lock (runtime, dev and docs groups) with pip-audit.
+# Any known vulnerability fails the check, as do lockfile, export and audit
+# errors. Environment markers are evaluated for Linux and CPython 3.14, so
+# packages limited to other platforms or implementations are not audited.
+
+on:
+  schedule:
+    - cron: "41 6 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/dependabot.yml"
+      - ".github/workflows/dependency-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: ">=0.13.4"
+          python-version: "3.14"
+          enable-cache: false
+      - name: Audit locked dependencies
+        env:
+          REPORT_DIR: ${{ runner.temp }}/dependency-audit
+        run: |
+          mkdir -p "$REPORT_DIR"
+          uv export --locked --all-groups --no-emit-project --format requirements-txt \
+            --output-file "$REPORT_DIR/requirements.txt"
+          status=0
+          uvx --python 3.14 pip-audit@2.10.1 \
+            --requirement "$REPORT_DIR/requirements.txt" --require-hashes --disable-pip \
+            --strict --progress-spinner off \
+            --format json --output "$REPORT_DIR/pip-audit.json" \
+            2> "$REPORT_DIR/pip-audit.stderr.txt" || status=$?
+          {
+            echo "## Dependency audit"
+            echo
+            if jq -e '.dependencies | type == "array"' "$REPORT_DIR/pip-audit.json" > /dev/null 2>&1; then
+              jq -r '
+                [.dependencies[] | select(.vulns | length > 0) | .name as $n | .version as $v
+                  | .vulns[] | "| \($n) | \($v) | \(.id) | \(.fix_versions | join(", ") | if . == "" then "No published fix" else . end) |"]
+                | if length == 0 then "No known vulnerabilities."
+                  else (["| Package | Version | Advisory | Fixed in |", "| --- | --- | --- | --- |"] + .) | join("\n") end
+              ' "$REPORT_DIR/pip-audit.json"
+            else
+              echo "Audit failed before producing a report. See pip-audit.stderr.txt."
+            fi
+          } | tee "$REPORT_DIR/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          cat "$REPORT_DIR/pip-audit.stderr.txt" >&2
+          exit "$status"
+      - name: Save audit reports
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: dependency-audit
+          path: ${{ runner.temp }}/dependency-audit/
+          retention-days: 30
+          if-no-files-found: warn

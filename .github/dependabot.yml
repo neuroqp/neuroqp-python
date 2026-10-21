@@ -3,11 +3,19 @@ updates:
   - package-ecosystem: uv
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
+    # Security PRs are exempt from this limit; ordinary version updates stay off.
+    open-pull-requests-limit: 0
     groups:
-      python-development:
-        dependency-type: development
+      python-security:
+        applies-to: security-updates
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
+    open-pull-requests-limit: 0
+    groups:
+      actions-security:
+        applies-to: security-updates
+        patterns: ["*"]
