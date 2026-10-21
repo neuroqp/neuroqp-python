@@ -8,6 +8,7 @@ Thank you for contributing to NeuroQP Python.
 - Keep changes focused and preserve the public API and supported export formats.
 - Never commit real project exports, patient information, credentials, or other private data.
 - Add or update tests for behavior changes and documentation for user-visible changes.
+- Use uv 0.13.4 or newer (`uv self update`); older releases trust a compromised CA (GHSA-hq85-5cpj-mr62).
 - Run `uv sync`, `uv run ruff format --check .`, `uv run ruff check .`, `uv run mypy`, and `uv run pytest`.
 
 ## Pull requests
